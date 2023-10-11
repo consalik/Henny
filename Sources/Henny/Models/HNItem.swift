@@ -12,7 +12,7 @@ public struct HNItem: Codable, Identifiable, Hashable {
     public let url: URL?
     public let score: Int
     public let titleHTML: String?
-    public let pollOptionsIds: [Int]?
+    public let pollOptionsIds: [Int]
     public let pollId: Int?
     public let parentId: Int?
 
@@ -49,7 +49,7 @@ public extension HNItem {
         url = try container.decodeIfPresent(URL.self, forKey: .url)
         score = try container.decodeIfPresent(Int.self, forKey: .score) ?? 0
         titleHTML = try container.decodeIfPresent(String.self, forKey: .titleHTML)
-        pollOptionsIds = try container.decodeIfPresent([Int].self, forKey: .pollOptionsIds)
+        pollOptionsIds = try container.decodeIfPresent([Int].self, forKey: .pollOptionsIds) ?? []
         pollId = try container.decodeIfPresent(Int.self, forKey: .pollId)
         parentId = try container.decodeIfPresent(Int.self, forKey: .parentId)
     }
