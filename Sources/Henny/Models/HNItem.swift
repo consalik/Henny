@@ -114,7 +114,7 @@ public extension HNItem {
         return attributedString?.string
     }
     
-    var markdown: String? {
+    var markdown: LocalizedStringKey? {
         guard let textHTML else {
             return nil
         }
@@ -130,6 +130,8 @@ public extension HNItem {
 
             .replacingOccurrences(of: "<p>", with: "\n\n")
         
-        return markdown
+        let cleanMarkdown = LocalizedStringKey(markdown)
+        
+        return cleanMarkdown
     }
 }
