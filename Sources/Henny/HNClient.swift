@@ -108,6 +108,21 @@ public class HNClient {
 
         return await items(ids: idsToFetch)
     }
+    
+    // MARK: - Comments
+    
+    public func comments(forItem item: HNItem) async -> [HNComment] {
+        let topLevelComments = await items(ids: item.commentIds)
+        
+        var nodes: [HNComment] = []
+        for topLevelComment in topLevelComments {
+            let comments = await comments(forItem: topLevelComment)
+            
+            nodes.append(HNComment(item: topLevelComment, comments: comments))
+        }
+        
+        return nodes
+    }
 
     // MARK: - Stories
     

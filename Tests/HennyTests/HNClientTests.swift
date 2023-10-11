@@ -6,7 +6,7 @@ import FirebaseCore
 final class HNClientTests: XCTestCase {
     
     override class func setUp() {
-        FirebaseApp.configure(options: .init(googleAppID: "YOUR_GOOGLE_APP_ID", gcmSenderID: "YOUR_GCM_SENDER_ID"))
+        FirebaseApp.configure(options: .init(googleAppID: "", gcmSenderID: ""))
     }
     
     override func setUp() {
@@ -67,7 +67,60 @@ final class HNClientTests: XCTestCase {
         XCTAssertEqual(items.count, 0)
     }
     
-    // MARK: - Story IDs
+    func testItemsPaginationWithValidLimitAndOffset() async {
+        let allItems = await HNClient.shared.items(ids: HennyTests.validItemIds)
+        
+        let offset = 2
+        let limit = 2
+        let paginatedItems = await HNClient.shared.items(ids: HennyTests.validItemIds, limit: limit, offset: offset)
+        
+        XCTAssertEqual(paginatedItems, Array(allItems[offset..<(offset + limit)]))
+    }
+    
+    func testItemsPaginationWithOffsetBeyondList() async {
+        let offset = 10
+        let limit = 2
+        let paginatedItems = await HNClient.shared.items(ids: HennyTests.validItemIds, limit: limit, offset: offset)
+        
+        XCTAssertEqual(paginatedItems.count, 0)
+    }
+    
+    func testItemsPaginationWithZeroLimit() async {
+        let offset = 1
+        let limit = 0
+        let paginatedItems = await HNClient.shared.items(ids: HennyTests.validItemIds, limit: limit, offset: offset)
+        
+        XCTAssertEqual(paginatedItems.count, 0)
+    }
+    
+    // MARK: - Comments
+    
+    func testFetchCommentTreeForItemWithComments() async {
+        let item = await HNClient.shared.item(id: HennyTests.validItemIds[0])
+        XCTAssertNotNil(item)
+        
+        let commentTree = await HNClient.shared.comments(forItem: item!)
+        XCTAssertGreaterThan(commentTree.count, 0)
+    }
+
+    func testRecursiveFetchForCommentsWithNestedComments() async {
+        let commentItem = await HNClient.shared.item(id: HennyTests.validItemIds[1])
+        XCTAssertNotNil(commentItem)
+        
+        let nestedCommentTree = await HNClient.shared.comments(forItem: commentItem!)
+        XCTAssertTrue(containsCommentWithIds(nestedCommentTree, ids: commentItem!.commentIds))
+    }
+
+    private func containsCommentWithIds(_ nodes: [HNComment], ids: [Int]) -> Bool {
+        for node in nodes {
+            if ids.contains(node.item.id) || containsCommentWithIds(node.comments, ids: ids) {
+                return true
+            }
+        }
+        return false
+    }
+    
+    // MARK: - Stories
     
     func testStoryIdsForAllStoryTypesShouldExist() async {
         for storyType in HNStoryType.allCases {
@@ -75,6 +128,38 @@ final class HNClientTests: XCTestCase {
             
             XCTAssertNotNil(storyIds)
             XCTAssertGreaterThan(storyIds.count, 0)
+        }
+    }
+    
+    func testStoryItemsPaginationWithValidLimitAndOffset() async {
+        for storyType in HNStoryType.allCases {
+            let allItems = await HNClient.shared.storyItems(type: storyType)
+            
+            let offset = 2
+            let limit = 2
+            let paginatedItems = await HNClient.shared.storyItems(type: storyType, limit: limit, offset: offset)
+            
+            XCTAssertEqual(paginatedItems, Array(allItems[offset..<(offset + limit)]))
+        }
+    }
+
+    func testStoryItemsPaginationWithOffsetBeyondList() async {
+        for storyType in HNStoryType.allCases {
+            let offset = 1000
+            let limit = 2
+            let paginatedItems = await HNClient.shared.storyItems(type: storyType, limit: limit, offset: offset)
+            
+            XCTAssertEqual(paginatedItems.count, 0)
+        }
+    }
+    
+    func testStoryItemsPaginationWithZeroLimit() async {
+        for storyType in HNStoryType.allCases {
+            let offset = 1
+            let limit = 0
+            let paginatedItems = await HNClient.shared.storyItems(type: storyType, limit: limit, offset: offset)
+            
+            XCTAssertEqual(paginatedItems.count, 0)
         }
     }
     
