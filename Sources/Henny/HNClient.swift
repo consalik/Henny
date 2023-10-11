@@ -6,7 +6,7 @@ import OSLog
 
 public class HNClient {
     
-    static let shared = HNClient()
+    public static let shared = HNClient()
     
     private let database: Database
     private let databaseReference: DatabaseReference
