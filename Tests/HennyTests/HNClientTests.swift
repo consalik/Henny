@@ -13,54 +13,51 @@ final class HNClientTests: XCTestCase {
         HNClient.shared.goOnline()
     }
     
-    let validItemIds = [1, 1232, 272, 484, 457]
-    let invalidItemIds = [-1231231231, 12312321123312, -12122112, 1912212312312, 912912381283218]
-    
     // MARK: - Item
     
     func testItemWithValidIdShouldExist() async {
-        let item = await HNClient.shared.item(id: validItemIds.randomElement()!)
+        let item = await HNClient.shared.item(id: HennyTests.validItemIds.randomElement()!)
         
         XCTAssertNotNil(item)
     }
     
     func testItemWithInvalidIdShouldNotExist() async {
-        let item = await HNClient.shared.item(id: invalidItemIds.randomElement()!)
+        let item = await HNClient.shared.item(id: HennyTests.invalidItemIds.randomElement()!)
         
         XCTAssertNil(item)
     }
     
     func testItemShouldPersistWhenGoingOffline() async {
-        let onlineItem = await HNClient.shared.item(id: validItemIds[0])
+        let onlineItem = await HNClient.shared.item(id: HennyTests.validItemIds[0])
         XCTAssertNotNil(onlineItem)
 
         HNClient.shared.goOffline()
         
-        let offlineItem = await HNClient.shared.item(id: validItemIds[0])
+        let offlineItem = await HNClient.shared.item(id: HennyTests.validItemIds[0])
         XCTAssertNotNil(offlineItem)
     }
     
     // MARK: - Items
     
     func testItemsWithValidIdsShouldExist() async {
-        let items = await HNClient.shared.items(ids: validItemIds)
+        let items = await HNClient.shared.items(ids: HennyTests.validItemIds)
         
         XCTAssertNotNil(items)
-        XCTAssertEqual(items.count, validItemIds.count)
+        XCTAssertEqual(items.count, HennyTests.validItemIds.count)
     }
     
     func testItemsWithInvalidIdsShouldNotExist() async {
-        let items = await HNClient.shared.items(ids: invalidItemIds)
+        let items = await HNClient.shared.items(ids: HennyTests.invalidItemIds)
         
         XCTAssertNotNil(items)
         XCTAssertEqual(items.count, 0)
     }
     
     func testItemsWithMixedIdsShouldExist() async {
-        let items = await HNClient.shared.items(ids: validItemIds + invalidItemIds)
+        let items = await HNClient.shared.items(ids: HennyTests.validItemIds + HennyTests.invalidItemIds)
         
         XCTAssertNotNil(items)
-        XCTAssertEqual(items.count, validItemIds.count)
+        XCTAssertEqual(items.count, HennyTests.validItemIds.count)
     }
     
     func testItemsWithNoIdsShouldNotExist() async {
@@ -83,28 +80,25 @@ final class HNClientTests: XCTestCase {
     
     // MARK: - User
     
-    let validUsernames = ["dang", "Phoqe", "0xPersona", "pseudolus", "mikece"]
-    let invalidUsernames = ["u912d9j812j9d21", "9k21d9kd", "102i09d1kd921k90d", "91912d8j9d12j891d2j89", "89jd12d81"]
-    
     func testUserWithValidUsernameShouldExist() async {
-        let user = await HNClient.shared.user(username: validUsernames.randomElement()!)
+        let user = await HNClient.shared.user(username: HennyTests.validUsernames.randomElement()!)
         
         XCTAssertNotNil(user)
     }
     
     func testUserWithInvalidUsernameShouldNotExist() async {
-        let user = await HNClient.shared.user(username: invalidUsernames.randomElement()!)
+        let user = await HNClient.shared.user(username: HennyTests.invalidUsernames.randomElement()!)
         
         XCTAssertNil(user)
     }
     
     func testUserShouldPersistWhenGoingOffline() async {
-        let onlineUser = await HNClient.shared.user(username: validUsernames[0])
+        let onlineUser = await HNClient.shared.user(username: HennyTests.validUsernames[0])
         XCTAssertNotNil(onlineUser)
 
         HNClient.shared.goOffline()
         
-        let offlineUser = await HNClient.shared.user(username: validUsernames[0])
+        let offlineUser = await HNClient.shared.user(username: HennyTests.validUsernames[0])
         XCTAssertNotNil(offlineUser)
     }
 }

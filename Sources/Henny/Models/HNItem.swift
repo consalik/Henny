@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 public struct HNItem: Codable, Identifiable, Hashable {
     public let id: Int
@@ -93,6 +94,24 @@ public extension HNItem {
     
     var video: Bool {
         return titleHTML?.contains("[video]") ?? false
+    }
+    
+    var text: String? {
+        guard let textHTML = textHTML else {
+            return nil
+        }
+
+        let data = Data(textHTML.utf8)
+        let attributedString = try? NSAttributedString(
+            data: data,
+            options: [
+                .documentType: NSAttributedString.DocumentType.html,
+                .characterEncoding: String.Encoding.utf8.rawValue
+            ],
+            documentAttributes: nil
+        )
+
+        return attributedString?.string
     }
     
     var markdown: String? {
