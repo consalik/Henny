@@ -38,7 +38,7 @@ public class HNClient {
 
     // MARK: - Item
 
-    func item(id: Int) async -> HNItem? {
+    public func item(id: Int) async -> HNItem? {
         let reference = databaseReference
             .child("item")
             .child("\(id)")
@@ -51,7 +51,7 @@ public class HNClient {
         return item
     }
 
-    func items(ids: [Int]) async -> [HNItem] {
+    public func items(ids: [Int]) async -> [HNItem] {
         if ids.isEmpty {
             return []
         }
@@ -92,13 +92,13 @@ public class HNClient {
     
     // MARK: - Items
 
-    func items(ids: [Int], limit: Int) async -> [HNItem] {
+    public func items(ids: [Int], limit: Int) async -> [HNItem] {
         let idsToFetch = Array(ids.prefix(min(limit, ids.count)))
         
         return await items(ids: idsToFetch)
     }
 
-    func items(ids: [Int], limit: Int, offset: Int) async -> [HNItem] {
+    public func items(ids: [Int], limit: Int, offset: Int) async -> [HNItem] {
         if offset >= ids.count {
             return []
         }
@@ -111,7 +111,7 @@ public class HNClient {
 
     // MARK: - Stories
     
-    func storyIds(type: HNStoryType) async -> [Int] {
+    public func storyIds(type: HNStoryType) async -> [Int] {
         let reference = databaseReference
             .child("\(type.databaseKey)")
         
@@ -123,7 +123,7 @@ public class HNClient {
         return storyIds
     }
 
-    func storyItems(type: HNStoryType, limit: Int = Int.max, offset: Int = 0) async -> [HNItem] {
+    public func storyItems(type: HNStoryType, limit: Int = Int.max, offset: Int = 0) async -> [HNItem] {
         let storyIds = await storyIds(type: type)
         
         if offset >= storyIds.count {
@@ -138,7 +138,7 @@ public class HNClient {
     
     // MARK: - Users
     
-    func user(username: String) async -> HNUser? {
+    public func user(username: String) async -> HNUser? {
         let reference = databaseReference
             .child("user")
             .child(username)
