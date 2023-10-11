@@ -8,7 +8,7 @@ public struct HNItem: Codable, Identifiable, Hashable {
     public let submitted: Date
     public let textHTML: String?
     public let dead: Bool
-    public let commentIds: [Int]?
+    public let commentIds: [Int]
     public let url: URL?
     public let score: Int
     public let titleHTML: String?
@@ -45,7 +45,7 @@ public extension HNItem {
         submitted = try container.decode(Date.self, forKey: .submitted)
         textHTML = try container.decodeIfPresent(String.self, forKey: .textHTML)
         dead = try container.decodeIfPresent(Bool.self, forKey: .dead) ?? false
-        commentIds = try container.decodeIfPresent([Int].self, forKey: .commentIds)
+        commentIds = try container.decodeIfPresent([Int].self, forKey: .commentIds) ?? []
         url = try container.decodeIfPresent(URL.self, forKey: .url)
         score = try container.decodeIfPresent(Int.self, forKey: .score) ?? 0
         titleHTML = try container.decodeIfPresent(String.self, forKey: .titleHTML)
@@ -77,5 +77,40 @@ public extension HNItem {
 public extension HNItem {
     var hnURL: URL {
         URL(string: "\(HNURL.website)/item?id=\(id)")!
+    }
+    
+    var commentCount: Int {
+        commentIds.count
+    }
+    
+    var document: Bool {
+        return titleHTML?.contains("[pdf]") ?? false
+    }
+    
+    var updated: Bool {
+        return titleHTML?.contains("[updated]") ?? false
+    }
+    
+    var video: Bool {
+        return titleHTML?.contains("[video]") ?? false
+    }
+    
+    var markdown: String? {
+        guard let textHTML else {
+            return nil
+        }
+        
+        var markdown = textHTML
+        
+        markdown = markdown
+            .replacingOccurrences(of: "<i>", with: "*")
+            .replacingOccurrences(of: "</i>", with: "*")
+
+            .replacingOccurrences(of: "<b>", with: "**")
+            .replacingOccurrences(of: "</b>", with: "**")
+
+            .replacingOccurrences(of: "<p>", with: "\n\n")
+        
+        return markdown
     }
 }
