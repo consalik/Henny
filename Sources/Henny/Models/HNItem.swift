@@ -2,19 +2,19 @@ import Foundation
 
 public struct HNItem: Codable, Identifiable, Hashable {
     public let id: Int
-    let deleted: Bool
-    let type: HNItemType
-    let author: String
-    let submitted: Date
-    let textHTML: String?
-    let dead: Bool
-    let commentIds: [Int]?
-    let url: URL?
-    let score: Int
-    let titleHTML: String?
-    let pollOptionsIds: [Int]?
-    let pollId: Int?
-    let parentId: Int?
+    public let deleted: Bool
+    public let type: HNItemType
+    public let author: String
+    public let submitted: Date
+    public let textHTML: String?
+    public let dead: Bool
+    public let commentIds: [Int]?
+    public let url: URL?
+    public let score: Int
+    public let titleHTML: String?
+    public let pollOptionsIds: [Int]?
+    public let pollId: Int?
+    public let parentId: Int?
 
     private enum CodingKeys: String, CodingKey {
         case id
