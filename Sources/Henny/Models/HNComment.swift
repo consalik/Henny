@@ -1,8 +1,8 @@
 import Foundation
 
 public struct HNComment: Codable {
-    let item: HNItem
-    let comments: [HNComment]
+    public let item: HNItem
+    public let comments: [HNComment]
 }
 
 extension HNComment: Identifiable {
