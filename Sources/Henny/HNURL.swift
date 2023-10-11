@@ -1,6 +1,6 @@
 import Foundation
 
-struct HNURL {
+public struct HNURL {
     static let website = URL(string: "https://news.ycombinator.com")!
 
     private static let apiVersion = "v0"

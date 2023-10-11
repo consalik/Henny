@@ -1,6 +1,6 @@
 import Foundation
 
-struct HNUpdates: Codable {
+public struct HNUpdates: Codable {
     let items: [Int]
     let profiles: [String]
 

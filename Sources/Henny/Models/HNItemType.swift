@@ -1,6 +1,6 @@
 import Foundation
 
-enum HNItemType: String, Codable, CaseIterable, Identifiable {
+public enum HNItemType: String, Codable, CaseIterable, Identifiable {
     case job
     case story
     case comment
@@ -16,7 +16,7 @@ enum HNItemType: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-extension HNItemType {
+public extension HNItemType {
     var id: String {
         self.rawValue
     }

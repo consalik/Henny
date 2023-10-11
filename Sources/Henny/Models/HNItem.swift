@@ -1,7 +1,7 @@
 import Foundation
 
-struct HNItem: Codable, Identifiable, Hashable {
-    let id: Int
+public struct HNItem: Codable, Identifiable, Hashable {
+    public let id: Int
     let deleted: Bool
     let type: HNItemType
     let author: String
@@ -34,7 +34,7 @@ struct HNItem: Codable, Identifiable, Hashable {
     }
 }
 
-extension HNItem {
+public extension HNItem {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -71,5 +71,11 @@ extension HNItem {
         try container.encode(pollOptionsIds, forKey: .pollOptionsIds)
         try container.encode(pollId, forKey: .pollId)
         try container.encode(parentId, forKey: .parentId)
+    }
+}
+
+public extension HNItem {
+    var hnURL: URL {
+        URL(string: "\(HNURL.website)/item?id=\(id)")!
     }
 }

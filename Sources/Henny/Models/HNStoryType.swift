@@ -1,6 +1,6 @@
 import Foundation
 
-enum HNStoryType: String, Codable, CaseIterable, Identifiable {
+public enum HNStoryType: String, Codable, CaseIterable, Identifiable {
     case top
     case new
     case best
@@ -18,7 +18,7 @@ enum HNStoryType: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-extension HNStoryType {
+public extension HNStoryType {
     var id: String {
         self.rawValue
     }

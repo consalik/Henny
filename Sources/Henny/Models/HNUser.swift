@@ -1,6 +1,6 @@
 import Foundation
 
-struct HNUser: Codable {
+public struct HNUser: Codable {
     let username: String
     let joined: Date
     let karma: Int
@@ -16,7 +16,7 @@ struct HNUser: Codable {
     }
 }
 
-extension HNUser {
+public extension HNUser {
     var hnURL: URL {
         return URL(string: "\(HNURL.website)/user?id=\(username)")!
     }
