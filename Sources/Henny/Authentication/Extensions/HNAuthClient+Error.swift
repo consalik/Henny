@@ -21,4 +21,10 @@ public extension HNAuthClient {
         case voteDiffers
         case couldNotCheckAnchor
     }
+    
+    enum UserError: Error {
+        case notSignedIn
+        case noUsername
+        case noUser
+    }
 }

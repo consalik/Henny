@@ -6,7 +6,7 @@ import FirebaseCore
 final class HNAuthClientTests: XCTestCase {
     
     override class func setUp() {
-        
+        FirebaseApp.configure(options: .init(googleAppID: "", gcmSenderID: ""))
     }
     
     override func setUpWithError() throws {
@@ -65,6 +65,35 @@ final class HNAuthClientTests: XCTestCase {
 
             try HNAuthClient.shared.signOut()
             XCTAssertFalse(HNAuthClient.shared.signedIn())
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    // MARK: - User
+
+    func testShouldNotReturnUserIfNotSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+
+        do {
+            _ = try await HNAuthClient.shared.user()
+            XCTFail("Should not return user if not signed in")
+        } catch let error as HNAuthClient.UserError {
+            XCTAssertEqual(error, HNAuthClient.UserError.notSignedIn)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testShouldReturnUserIfSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+
+        do {
+            try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
+            XCTAssertTrue(HNAuthClient.shared.signedIn())
+
+            let user = try await HNAuthClient.shared.user()
+            XCTAssertEqual(user.username, HennyTests.validUsername)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
