@@ -7,7 +7,7 @@ let package = Package(
     name: "Henny",
     platforms: [
         .iOS(.v13),
-        .macOS(.v10_15),
+        .macOS(.v13),
         .tvOS(.v12),
         .driverKit(.v19),
         .macCatalyst(.v13),
@@ -25,6 +25,10 @@ let package = Package(
       .package(
         url: "https://github.com/firebase/firebase-ios-sdk.git",
         .upToNextMajor(from: "10.16.0")
+      ),
+      .package(
+        url: "https://github.com/scinfu/SwiftSoup.git",
+        .upToNextMajor(from: "2.6.1")
       )
     ],
     targets: [
@@ -34,7 +38,8 @@ let package = Package(
             name: "Henny",
             dependencies: [
                 .product(name: "FirebaseDatabase", package: "firebase-ios-sdk"),
-                .product(name: "FirebaseDatabaseSwift", package: "firebase-ios-sdk")
+                .product(name: "FirebaseDatabaseSwift", package: "firebase-ios-sdk"),
+                "SwiftSoup"
             ]
         ),
         .testTarget(
