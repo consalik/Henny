@@ -62,22 +62,6 @@ public struct HNAuthClient {
         return String(username)
     }
     
-    public func user() async throws -> HNUser {
-        guard signedIn() else {
-            throw UserError.notSignedIn
-        }
-        
-        guard let username = username() else {
-            throw UserError.noUsername
-        }
-        
-        guard let user = await HNClient.shared.user(username: username) else {
-            throw UserError.noUser
-        }
-        
-        return user
-    }
-    
     // MARK: - Voting
     
     public func vote(id: Int, direction: HNVoteDirection) async throws {
