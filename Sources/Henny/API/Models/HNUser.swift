@@ -1,11 +1,11 @@
 import Foundation
 
 public struct HNUser: Codable {
-    let username: String
-    let joined: Date
-    let karma: Int
-    let bio: String?
-    let submissions: [Int]?
+    public let username: String
+    public let joined: Date
+    public let karma: Int
+    public let bio: String?
+    public let submissions: [Int]?
 
     private enum CodingKeys: String, CodingKey {
         case username = "id"
