@@ -72,6 +72,25 @@ final class HNAuthClientTests: XCTestCase {
     
     // MARK: - User
 
+    func testShouldNotReturnUsernameIfNotSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+
+        XCTAssertNil(HNAuthClient.shared.username())
+    }
+
+    func testShouldReturnUsernameIfSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+
+        do {
+            try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
+            XCTAssertTrue(HNAuthClient.shared.signedIn())
+
+            XCTAssertEqual(HNAuthClient.shared.username(), HennyTests.validUsername)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     func testShouldNotReturnUserIfNotSignedIn() async throws {
         XCTAssertFalse(HNAuthClient.shared.signedIn())
 

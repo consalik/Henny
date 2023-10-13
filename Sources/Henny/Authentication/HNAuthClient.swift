@@ -50,6 +50,18 @@ public struct HNAuthClient {
     
     // MARK: - User
     
+    public func username() -> String? {
+        let cookies = HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url)
+
+        guard let cookies = cookies,
+            let cookie = cookies.first(where: { $0.name == "user" }),
+            let username = cookie.value.split(separator: "&").first else {
+            return nil
+        }
+
+        return String(username)
+    }
+    
     public func user() async throws -> HNUser {
         guard signedIn() else {
             throw UserError.notSignedIn
@@ -144,18 +156,6 @@ public struct HNAuthClient {
         } catch {
             throw VoteError.couldNotCheckAnchor
         }
-    }
-
-    private func username() -> String? {
-        let cookies = HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url)
-
-        guard let cookies = cookies,
-            let cookie = cookies.first(where: { $0.name == "user" }),
-            let username = cookie.value.split(separator: "&").first else {
-            return nil
-        }
-
-        return String(username)
     }
     
     // MARK: - HTML
