@@ -16,6 +16,7 @@ public struct HNItem: Codable, Identifiable, Hashable {
     public let pollOptionsIds: [Int]
     public let pollId: Int?
     public let parentId: Int?
+    public let commentCount: Int?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -32,6 +33,7 @@ public struct HNItem: Codable, Identifiable, Hashable {
         case pollOptionsIds = "parts"
         case pollId = "poll"
         case parentId = "parent"
+        case commentCount = "descendants"
     }
 }
 
@@ -78,10 +80,6 @@ public extension HNItem {
 public extension HNItem {
     var hnURL: URL {
         URL(string: "\(HNURL.website)/item?id=\(id)")!
-    }
-    
-    var commentCount: Int {
-        commentIds.count
     }
     
     var document: Bool {
