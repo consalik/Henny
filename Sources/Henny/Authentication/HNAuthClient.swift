@@ -62,6 +62,10 @@ public struct HNAuthClient {
         return String(username)
     }
     
+    public func settings() -> HNUserSettings? {
+        return nil
+    }
+    
     // MARK: - Voting
     
     public func vote(id: Int, direction: HNVoteDirection) async throws {
