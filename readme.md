@@ -22,6 +22,11 @@ But if you want to try it out, you can install it using Swift Package Manager:
 .package(url: "https://github.com/consalik/Henny.git", branch: "master")
 ```
 
+## Roadmap
+
+- [ ] Add support for including metadata in requests or fetching in parallel. Including images and summaries of websites.
+- [ ] Add more authentication requests.
+
 ## License
 
 MIT
