@@ -16,7 +16,7 @@ public struct HNItem: Codable, Identifiable, Hashable {
     public let pollOptionsIds: [Int]
     public let pollId: Int?
     public let parentId: Int?
-    public let commentCount: Int?
+    public let commentCount: Int
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -55,6 +55,7 @@ public extension HNItem {
         pollOptionsIds = try container.decodeIfPresent([Int].self, forKey: .pollOptionsIds) ?? []
         pollId = try container.decodeIfPresent(Int.self, forKey: .pollId)
         parentId = try container.decodeIfPresent(Int.self, forKey: .parentId)
+        commentCount = try container.decodeIfPresent(Int.self, forKey: .commentCount) ?? 0
     }
 
     func encode(to encoder: Encoder) throws {
@@ -74,6 +75,7 @@ public extension HNItem {
         try container.encode(pollOptionsIds, forKey: .pollOptionsIds)
         try container.encode(pollId, forKey: .pollId)
         try container.encode(parentId, forKey: .parentId)
+        try container.encode(commentCount, forKey: .commentCount)
     }
 }
 
