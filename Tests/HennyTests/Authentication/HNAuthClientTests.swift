@@ -70,8 +70,14 @@ final class HNAuthClientTests: XCTestCase {
 
     func testShouldNotReturnUsernameIfNotSignedIn() async throws {
         XCTAssertFalse(HNAuthClient.shared.signedIn())
-
-        XCTAssertNil(HNAuthClient.shared.username())
+        
+        do {
+            let _ = try HNAuthClient.shared.username()
+        } catch let error as HNAuthClient.UsernameError {
+            XCTAssertEqual(error, HNAuthClient.UsernameError.notSignedIn)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
     }
 
     func testShouldReturnUsernameIfSignedIn() async throws {
@@ -81,7 +87,35 @@ final class HNAuthClientTests: XCTestCase {
             try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
             XCTAssertTrue(HNAuthClient.shared.signedIn())
 
-            XCTAssertEqual(HNAuthClient.shared.username(), HennyTests.validUsername)
+            let username = try HNAuthClient.shared.username()
+            XCTAssertEqual(username, HennyTests.validUsername)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    // MARK: - User Settings
+
+    func testShouldNotReturnUserSettingsIfNotSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+
+        do {
+            let _ = try await HNAuthClient.shared.userSettings()
+        } catch let error as HNAuthClient.UserSettingsError {
+            XCTAssertEqual(error, HNAuthClient.UserSettingsError.notSignedIn)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testShouldReturnUserSettingsIfSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+
+        do {
+            try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
+            XCTAssertTrue(HNAuthClient.shared.signedIn())
+
+            let _ = try await HNAuthClient.shared.userSettings()
         } catch {
             XCTFail("Unexpected error: \(error)")
         }

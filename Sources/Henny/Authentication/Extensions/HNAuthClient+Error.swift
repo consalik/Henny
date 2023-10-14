@@ -27,4 +27,15 @@ public extension HNAuthClient {
         case noUsername
         case noUser
     }
+    
+    enum UsernameError: Error {
+        case notSignedIn
+        case invalidCookie
+    }
+    
+    enum UserSettingsError: Error {
+        case notSignedIn
+        case couldNotConvertUserPage
+        case invalidUserSettings
+    }
 }

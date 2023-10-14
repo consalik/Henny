@@ -1,7 +1,7 @@
 import Foundation
 
 public struct HNUserSettings {
-    public let email: String
+    public let email: String?
     
     public let showDead: Bool
     

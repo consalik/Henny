@@ -50,20 +50,38 @@ public struct HNAuthClient {
     
     // MARK: - User
     
-    public func username() -> String? {
+    public func username() throws -> String {
+        guard signedIn() else {
+            throw UsernameError.notSignedIn
+        }
+        
         let cookies = HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url)
 
         guard let cookies = cookies,
             let cookie = cookies.first(where: { $0.name == "user" }),
             let username = cookie.value.split(separator: "&").first else {
-            return nil
+            throw UsernameError.invalidCookie
         }
 
         return String(username)
     }
     
-    public func settings() -> HNUserSettings? {
-        return nil
+    public func userSettings() async throws -> HNUserSettings {
+        guard signedIn() else {
+            throw UserSettingsError.notSignedIn
+        }
+        
+        let username = try username()
+        
+        guard let html = try await htmlForUser(username: username) else {
+            throw UserSettingsError.couldNotConvertUserPage
+        }
+        
+        guard let userSettings = try userSettings(html: html) else {
+            throw UserSettingsError.invalidUserSettings
+        }
+        
+        return userSettings
     }
     
     // MARK: - Voting
@@ -164,6 +182,22 @@ public struct HNAuthClient {
         return html
     }
     
+    private func htmlForUser(username: String) async throws -> String? {
+        let userURL = HNURL.website
+            .appendingPathComponent("user")
+            .appending(queryItems: [
+                URLQueryItem(name: "id", value: username)
+            ])
+        
+        let (data, _) = try await URLSession.shared.data(from: userURL)
+        
+        guard let html = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        
+        return html
+    }
+    
     private func authToken(anchorId: String, html: String) throws -> String? {
         let document = try SwiftSoup.parse(html)
         let anchor = try document.select("a#\(anchorId)").first()
@@ -188,5 +222,34 @@ public struct HNAuthClient {
         guard validation == nil else {
             throw SignInError.captchaVerificationNeeded
         }
+    }
+    
+    private func userSettings(html: String) throws -> HNUserSettings? {
+        let document = try SwiftSoup.parse(html)
+        
+        let email = try document.select("input[name=email]").first()?.`val`()
+
+        guard let showdeadStr = try document.select("select[name=showd] option[selected]").first()?.text(),
+              let noprocrastStr = try document.select("select[name=nopro] option[selected]").first()?.text(),
+              let maxvisitStr = try document.select("input[name=maxv]").first()?.`val`(),
+              let minawayStr = try document.select("input[name=mina]").first()?.`val`(),
+              let delayStr = try document.select("input[name=delay]").first()?.`val`(),
+              let maxvisit = Int(maxvisitStr),
+              let minaway = Int(minawayStr),
+              let delay = Int(delayStr) else {
+            return nil
+        }
+        
+        let showDead = showdeadStr.lowercased() == "yes"
+        let limitVisits = noprocrastStr.lowercased() == "yes"
+        
+        return HNUserSettings(
+            email: email,
+            showDead: showDead,
+            limitVisits: limitVisits,
+            browsingDuration: maxvisit,
+            coolOffInterval: minaway,
+            commentEditWindow: delay
+        )
     }
 }
