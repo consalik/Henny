@@ -272,16 +272,16 @@ public struct HNAuthClient {
             return nil
         }
         
-        let showDead = showdeadStr.lowercased() == "yes"
-        let limitVisits = noprocrastStr.lowercased() == "yes"
+        let showdead = showdeadStr.lowercased() == "yes"
+        let noprocrast = noprocrastStr.lowercased() == "yes"
         
         return HNUserSettings(
             email: email,
-            showDead: showDead,
-            limitVisits: limitVisits,
-            browsingDuration: maxvisit,
-            coolOffInterval: minaway,
-            commentEditWindow: delay
+            showDead: showdead,
+            noProcrast: noprocrast,
+            maxVisit: maxvisit,
+            minAway: minaway,
+            delay: delay
         )
     }
     
