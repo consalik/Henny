@@ -1,8 +1,8 @@
 import Foundation
 
-struct Henny {
-    struct Preview {
-        static let story = HNItem(
+public struct Henny {
+    public struct Preview {
+        public static let story = HNItem(
             id: 8863,
             deleted: false,
             type: .story,
