@@ -54,7 +54,7 @@ public struct Henny {
             commentCount: 71
         )
         
-        static let storyText = HNItem(
+        public static let storyText = HNItem(
             id: 121003,
             deleted: false,
             type: .story,
