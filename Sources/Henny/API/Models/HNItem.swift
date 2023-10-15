@@ -35,6 +35,24 @@ public struct HNItem: Codable, Identifiable, Hashable {
         case parentId = "parent"
         case commentCount = "descendants"
     }
+    
+    init(id: Int, deleted: Bool, type: HNItemType, author: String, submitted: Date, textHTML: String?, dead: Bool, commentIds: [Int], url: URL?, score: Int, titleHTML: String?, pollOptionsIds: [Int], pollId: Int?, parentId: Int?, commentCount: Int) {
+        self.id = id
+        self.deleted = deleted
+        self.type = type
+        self.author = author
+        self.submitted = submitted
+        self.textHTML = textHTML
+        self.dead = dead
+        self.commentIds = commentIds
+        self.url = url
+        self.score = score
+        self.titleHTML = titleHTML
+        self.pollOptionsIds = pollOptionsIds
+        self.pollId = pollId
+        self.parentId = parentId
+        self.commentCount = commentCount
+    }
 }
 
 public extension HNItem {
