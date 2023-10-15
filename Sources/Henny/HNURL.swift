@@ -30,6 +30,9 @@ public struct HNURL {
         case login
         case vote
         case fave
+        case item
+        case user
+        case xuser
 
         var url: URL {
             return HNURL.website.appendingPathComponent(self.rawValue)

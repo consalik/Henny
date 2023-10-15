@@ -84,6 +84,24 @@ public struct HNAuthClient {
         return userSettings
     }
     
+    public func updateUserSettings(userSettings: HNUserSettings) async throws {
+        guard signedIn() else {
+            throw UpdateUserSettingsError.notSignedIn
+        }
+        
+        let username = try username()
+        
+        guard let html = try await htmlForUser(username: username) else {
+            throw UpdateUserSettingsError.couldNotConvertUserPage
+        }
+        
+        guard let hmac = try hmac(html: html) else {
+            throw UpdateUserSettingsError.invalidHmac
+        }
+        
+        
+    }
+    
     // MARK: - Voting
     
     public func vote(id: Int, direction: HNVoteDirection) async throws {
@@ -130,6 +148,20 @@ public struct HNAuthClient {
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = body.data(using: .utf8)
 
+        return request
+    }
+    
+    private func updateUserSettingsRequest(userSettings: HNUserSettings, hmac: String) -> URLRequest? {
+        guard let body = userSettings.httpBody(username: "hackr-test", hmac: hmac) else {
+            return nil
+        }
+        
+        var request = URLRequest(url: HNURL.HackerNews.xuser.url)
+        
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body.data(using: .utf8)
+        
         return request
     }
     
@@ -251,5 +283,15 @@ public struct HNAuthClient {
             coolOffInterval: minaway,
             commentEditWindow: delay
         )
+    }
+    
+    private func hmac(html: String) throws -> String? {
+        let document = try SwiftSoup.parse(html)
+
+        guard let hmac = try document.select("input[name=hmac]").first()?.`val`() else {
+            return nil
+        }
+
+        return hmac
     }
 }

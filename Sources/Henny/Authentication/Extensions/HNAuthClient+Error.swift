@@ -38,4 +38,10 @@ public extension HNAuthClient {
         case couldNotConvertUserPage
         case invalidUserSettings
     }
+    
+    enum UpdateUserSettingsError: Error {
+        case notSignedIn
+        case couldNotConvertUserPage
+        case invalidHmac
+    }
 }
