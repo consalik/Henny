@@ -117,4 +117,8 @@ public extension HNItem {
     var delayed: Bool {
         textHTML == "[delayed]"
     }
+
+    var hasComments: Bool {
+        commentCount > 0
+    }
 }
