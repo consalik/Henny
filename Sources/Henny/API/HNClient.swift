@@ -50,63 +50,28 @@ public class HNClient {
         
         return item
     }
-
-    public func items(ids: [Int]) async -> [HNItem] {
-        if ids.isEmpty {
-            return []
-        }
-        
-        let items: [HNItem]? = await withTaskGroup(of: HNItem?.self) { taskGroup in
-            for id in ids {
-                taskGroup.addTask(priority: .high) {
-                    await self.item(id: id)
-                }
-            }
-            
-            var itemsSet = Set<HNItem>()
-            itemsSet.reserveCapacity(ids.count)
-            
-            for await item in taskGroup {
-                guard let item = item else {
-                    continue
-                }
-                
-                itemsSet.insert(item)
-            }
-            
-            // this needs to happen here as we only have access to `ids` in the client.
-            let sortedItems = itemsSet.sorted { lhs, rhs in
-                guard let lhsIndex = ids.firstIndex(of: lhs.id),
-                      let rhsIndex = ids.firstIndex(of: rhs.id) else {
-                    return false
-                }
-
-                return lhsIndex < rhsIndex
-            }
-            
-            return sortedItems
-        }
-        
-        return items ?? []
-    }
     
     // MARK: - Items
-
-    public func items(ids: [Int], limit: Int) async -> [HNItem] {
-        let idsToFetch = Array(ids.prefix(min(limit, ids.count)))
-        
-        return await items(ids: idsToFetch)
-    }
-
-    public func items(ids: [Int], limit: Int, offset: Int) async -> [HNItem] {
+    
+    public func items(ids: [Int], limit: Int? = nil, offset: Int = 0) async -> [HNItem] {
         if offset >= ids.count {
             return []
         }
-
-        let endIndex = min(offset + limit, ids.count)
+        
+        let endIndex = limit.map { min(offset + $0, ids.count) } ?? ids.count
         let idsToFetch = Array(ids[offset..<endIndex])
 
-        return await items(ids: idsToFetch)
+        if idsToFetch.isEmpty {
+            return []
+        }
+        
+        return await fetchItems(with: idsToFetch)
+    }
+
+    // MARK: - Items (Stream)
+
+    public func items(ids: [Int], limit: Int? = nil, offset: Int = 0) -> AsyncStream<HNItem> {
+        return createItemStream(with: ids, limit: limit, offset: offset)
     }
     
     // MARK: - Comments
@@ -124,6 +89,29 @@ public class HNClient {
         return nodes
     }
 
+    // MARK: - Comments (Stream)
+
+    public func comments(forItem item: HNItem) -> AsyncStream<HNComment> {
+        AsyncStream(HNComment.self) { continuation in
+            Task {
+                let topLevelComments = await items(ids: item.commentIds)
+                
+                var nodes: [HNComment] = []
+                for topLevelComment in topLevelComments {
+                    let comments = await comments(forItem: topLevelComment)
+                    
+                    nodes.append(HNComment(item: topLevelComment, comments: comments))
+                }
+                
+                for node in nodes {
+                    continuation.yield(node)
+                }
+                
+                continuation.finish()
+            }
+        }
+    }
+
     // MARK: - Stories
     
     public func storyIds(type: HNStoryType) async -> [Int] {
@@ -138,20 +126,62 @@ public class HNClient {
         return storyIds
     }
 
-    public func storyItems(type: HNStoryType, limit: Int = Int.max, offset: Int = 0) async -> [HNItem] {
+    public func storyItems(type: HNStoryType, limit: Int? = nil, offset: Int = 0) async -> [HNItem] {
         let storyIds = await storyIds(type: type)
         
         if offset >= storyIds.count {
             return []
         }
 
-        let endIndex = min(offset + limit, storyIds.count)
+        let endIndex = limit.map { min(offset + $0, storyIds.count) } ?? storyIds.count
         let storyIdsToFetch = Array(storyIds[offset..<endIndex])
 
         return await items(ids: storyIdsToFetch)
     }
+
+    // MARK: - Stories (Stream)
     
-    // MARK: - Users
+    public func storyItems(type: HNStoryType, limit: Int? = nil, offset: Int = 0) -> AsyncStream<HNItem> {
+        AsyncStream(HNItem.self) { continuation in
+            Task {
+                let storyIds = await storyIds(type: type)
+                
+                guard offset < storyIds.count else {
+                    continuation.finish()
+                    return
+                }
+
+                let endIndex = limit.map { min(offset + $0, storyIds.count) } ?? storyIds.count
+                let idsToFetch = Array(storyIds[offset..<endIndex])
+
+                guard !idsToFetch.isEmpty else {
+                    continuation.finish()
+                    return
+                }
+
+                await withTaskGroup(of: HNItem?.self) { taskGroup in
+                    for id in idsToFetch {
+                        taskGroup.addTask(priority: .high) {
+                            await self.item(id: id)
+                        }
+                    }
+
+                    var emittedIds = Set<Int>()
+
+                    for await itemOptional in taskGroup {
+                        if let item = itemOptional, !emittedIds.contains(item.id) {
+                            continuation.yield(item)
+                            emittedIds.insert(item.id)
+                        }
+                    }
+
+                    continuation.finish()
+                }
+            }
+        }
+    }
+    
+    // MARK: - User
     
     public func user(username: String) async -> HNUser? {
         let reference = databaseReference
@@ -164,6 +194,52 @@ public class HNClient {
         }
         
         return user
+    }
+    
+    // MARK: - Helpers
+    
+    private func fetchItems(with ids: [Int]) async -> [HNItem] {
+        var fetchedItems = [HNItem]()
+
+        await withTaskGroup(of: HNItem?.self) { taskGroup in
+            for id in ids {
+                taskGroup.addTask {
+                    await self.item(id: id)
+                }
+            }
+
+            for await result in taskGroup {
+                if let item = result {
+                    fetchedItems.append(item)
+                }
+            }
+        }
+
+        return fetchedItems
+    }
+    
+    private func createItemStream(with ids: [Int], limit: Int? = nil, offset: Int = 0) -> AsyncStream<HNItem> {
+        AsyncStream(HNItem.self) { continuation in
+            Task {
+                let validIds = Array(ids[offset..<(limit.map { offset + $0 } ?? ids.count)])
+
+                await withTaskGroup(of: HNItem?.self) { taskGroup in
+                    for id in validIds {
+                        taskGroup.addTask {
+                            await self.item(id: id)
+                        }
+                    }
+
+                    for await result in taskGroup {
+                        if let item = result {
+                            continuation.yield(item)
+                        }
+                    }
+                }
+
+                continuation.finish()
+            }
+        }
     }
 }
 
