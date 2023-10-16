@@ -2,10 +2,21 @@ import Foundation
 import SwiftSoup
 
 public struct HNAuthClient {
+    
     public static let shared = HNAuthClient()
     
     // MARK: - Lifecycle
     
+    ///
+    /// Signs the user in using the provided username and password.
+    /// It signs the user in by making a POST request to the login page with the provided credentials.
+    /// It then checks if the user is signed in by checking if the `user` cookie is present.
+    /// 
+    /// - Throws: `SignInError.alreadySignedIn` if the user is already signed in.
+    /// - Throws: `SignInError.invalidResponse` if the response from the server could not be converted to a string.
+    /// - Throws: `SignInError.invalidCredentials` if the credentials are invalid.
+    /// - Throws: `SignInError.captchaVerificationNeeded` if the server requires the user to verify that they are not a robot.
+    ///
     public func signIn(username: String, password: String) async throws {
         guard !signedIn() else {
             throw SignInError.alreadySignedIn
@@ -18,52 +29,31 @@ public struct HNAuthClient {
             throw SignInError.invalidResponse
         }
         
-        try checkCaptchaVerificationNeeded(html: html)
+        guard !captcha(html: html) else {
+            throw SignInError.captchaVerificationNeeded
+        }
         
         guard signedIn() else {
             throw SignInError.invalidCredentials
         }
     }
     
+    /// Whether the user is signed in based on the presence of the `user` cookie.
     public func signedIn() -> Bool {
-        let cookies = HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url)
-
-        guard let cookies = cookies,
-            let cookie = cookies.first(where: { $0.name == "user" }),
-            let _ = cookie.value.split(separator: "&").first,
-            let _ = cookie.value.split(separator: "&").last else {
-            return false
-        }
-
-        return true
+        cookie(named: "user") != nil
     }
     
-    public func signOut() throws {
-        guard signedIn() else {
-            throw SignOutError.notSignedIn
-        }
-        
-        HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url)?.forEach {
-            HTTPCookieStorage.shared.deleteCookie($0)
-        }
+    /// Signs the user out by removing all the cookies including the `user` cookie.
+    public func signOut() {
+        removeAllCookies()
     }
     
     // MARK: - User
     
-    public func username() throws -> String {
-        guard signedIn() else {
-            throw UsernameError.notSignedIn
-        }
-        
-        let cookies = HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url)
-
-        guard let cookies = cookies,
-            let cookie = cookies.first(where: { $0.name == "user" }),
-            let username = cookie.value.split(separator: "&").first else {
-            throw UsernameError.invalidCookie
-        }
-
-        return String(username)
+    /// The username of the signed in user.
+    /// Returns `nil` if the user is not signed in.
+    public func username() -> String? {
+        extractUsernameFromCookie()
     }
     
     public func userSettings() async throws -> HNUserSettings {
@@ -71,13 +61,15 @@ public struct HNAuthClient {
             throw UserSettingsError.notSignedIn
         }
         
-        let username = try username()
+        guard let username = username() else {
+            throw UserSettingsError.invalidUserSettings // TODO
+        }
         
-        guard let html = try await htmlForUser(username: username) else {
+        guard let html = try await fetchHtmlForUser(username: username) else {
             throw UserSettingsError.couldNotConvertUserPage
         }
         
-        guard let userSettings = try userSettings(html: html) else {
+        guard let userSettings = userSettings(html: html) else {
             throw UserSettingsError.invalidUserSettings
         }
         
@@ -91,13 +83,13 @@ public struct HNAuthClient {
             throw VoteError.notSignedIn
         }
         
-        guard let html = try await htmlForItem(id: id) else {
+        guard let html = try await fetchHtmlForItem(id: id) else {
             throw VoteError.couldNotConvertItemPage
         }
         
         let anchorId = anchorId(id: id, direction: direction)
         
-        guard let authToken = try authToken(anchorId: anchorId, html: html) else {
+        guard let authToken = extractAuthToken(from: html, anchorId: anchorId) else {
             throw VoteError.couldNotExtractAuthToken
         }
         
@@ -122,29 +114,26 @@ public struct HNAuthClient {
     
     // MARK: - Helpers
     
-    private func signInRequest(username: String, password: String) -> URLRequest {
-        var request = URLRequest(url: HNURL.HackerNews.login.url)
-        let body = "acct=\(username)&pw=\(password)"
+    private func fetchHtmlForItem(id: Int) async throws -> String? {
+        let itemURL = HNURL.Website.item(id: id)
+        let (data, _) = try await URLSession.shared.data(from: itemURL)
 
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = body.data(using: .utf8)
-
-        return request
+        guard let html = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+    
+        return html
     }
     
-    private func updateUserSettingsRequest(userSettings: HNUserSettings, hmac: String) -> URLRequest? {
-        guard let body = userSettings.httpBody(username: "hackr-test", hmac: hmac) else {
+    private func fetchHtmlForUser(username: String) async throws -> String? {
+        let userURL = HNURL.Website.user(id: username)
+        let (data, _) = try await URLSession.shared.data(from: userURL)
+        
+        guard let html = String(data: data, encoding: .utf8) else {
             return nil
         }
         
-        var request = URLRequest(url: HNURL.HackerNews.xuser.url)
-        
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = body.data(using: .utf8)
-        
-        return request
+        return html
     }
     
     private func anchorId(id: Int, direction: HNVoteDirection) -> String {
@@ -161,77 +150,84 @@ public struct HNAuthClient {
             throw VoteError.notSignedIn
         }
         
-        guard let html = try await htmlForItem(id: id) else {
+        guard let html = try await fetchHtmlForItem(id: id) else {
             throw VoteError.couldNotConvertItemPage
         }
         
-        do {
-            return try voted(id: id, direction: direction, html: html)
-        } catch {
-            throw VoteError.couldNotCheckAnchor
+        return voted(id: id, direction: direction, html: html)
+    }
+    
+    // MARK: - Cookies
+    
+    private func cookie(named name: String) -> HTTPCookie? {
+        let cookies = HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url) ?? []
+        return cookies.first { $0.name == name }
+    }
+    
+    private func extractUsernameFromCookie() -> String? {
+        guard let userCookieValue = cookie(named: "user")?.value,
+              let username = userCookieValue.split(separator: "&").first else {
+            return nil
         }
+        
+        return String(username)
+    }
+    
+    private func removeAllCookies() {
+        if let cookies = HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url) {
+            cookies.forEach { HTTPCookieStorage.shared.deleteCookie($0) }
+        }
+    }
+    
+    // MARK: - Requests
+    
+    private func signInRequest(username: String, password: String) -> URLRequest {
+        var request = URLRequest(url: HNURL.HackerNews.login.url)
+        let body = "acct=\(username)&pw=\(password)"
+
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body.data(using: .utf8)
+
+        return request
     }
     
     // MARK: - HTML
     
-    private func htmlForItem(id: Int) async throws -> String? {
-        let itemURL = HNURL.Website.item(id: id)
-        let (data, _) = try await URLSession.shared.data(from: itemURL)
-
-        guard let html = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-    
-        return html
-    }
-    
-    private func htmlForUser(username: String) async throws -> String? {
-        let userURL = HNURL.Website.user(id: username)
-        let (data, _) = try await URLSession.shared.data(from: userURL)
-        
-        guard let html = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        
-        return html
-    }
-    
-    private func authToken(anchorId: String, html: String) throws -> String? {
-        let document = try SwiftSoup.parse(html)
-        let anchor = try document.select("a#\(anchorId)").first()
-        let href = try anchor?.attr("href")
+    private func extractAuthToken(from html: String, anchorId: String) -> String? {
+        let document = try? SwiftSoup.parse(html)
+        let anchor = try? document?.select("a#\(anchorId)").first()
+        let href = try? anchor?.attr("href")
         let components = href?.components(separatedBy: "&")
         let auth = components?.first(where: { $0.hasPrefix("auth=") })?.replacingOccurrences(of: "auth=", with: "")
 
         return auth
     }
     
-    private func voted(id: Int, direction: HNVoteDirection, html: String) throws -> Bool {
-        let document = try SwiftSoup.parse(html)
-        let anchor = try document.select("a#\(direction)_\(id)").first()
+    private func voted(id: Int, direction: HNVoteDirection, html: String) -> Bool {
+        let document = try? SwiftSoup.parse(html)
+        let anchor = try? document?.select("a#\(direction)_\(id)").first()
 
         return anchor != nil
     }
     
-    private func checkCaptchaVerificationNeeded(html: String) throws {
-        let document = try SwiftSoup.parse(html)
-        let validation = try document.select(".g-recaptcha").first()
-
-        guard validation == nil else {
-            throw SignInError.captchaVerificationNeeded
-        }
+    private func captcha(html: String) -> Bool {
+        let document = try? SwiftSoup.parse(html)
+        let validation = try? document?.select(".g-recaptcha").first()
+        
+        return validation != nil
     }
     
-    private func userSettings(html: String) throws -> HNUserSettings? {
-        let document = try SwiftSoup.parse(html)
+    private func userSettings(html: String) -> HNUserSettings? {
+        let document = try? SwiftSoup.parse(html)
         
-        let email = try document.select("input[name=email]").first()?.`val`()
+        let email = try? document?.select("input[name=email]").first()?.`val`()
 
-        guard let showdeadStr = try document.select("select[name=showd] option[selected]").first()?.text(),
-              let noprocrastStr = try document.select("select[name=nopro] option[selected]").first()?.text(),
-              let maxvisitStr = try document.select("input[name=maxv]").first()?.`val`(),
-              let minawayStr = try document.select("input[name=mina]").first()?.`val`(),
-              let delayStr = try document.select("input[name=delay]").first()?.`val`(),
+        guard let showdeadStr = try? document?.select("select[name=showd] option[selected]").first()?.text(),
+              let noprocrastStr = try? document?.select("select[name=nopro] option[selected]").first()?.text(),
+              let maxvisitStr = try? document?.select("input[name=maxv]").first()?.`val`(),
+              let minawayStr = try? document?.select("input[name=mina]").first()?.`val`(),
+              let delayStr = try? document?.select("input[name=delay]").first()?.`val`(),
               let maxvisit = Int(maxvisitStr),
               let minaway = Int(minawayStr),
               let delay = Int(delayStr) else {
@@ -251,12 +247,9 @@ public struct HNAuthClient {
         )
     }
     
-    private func hmac(html: String) throws -> String? {
-        let document = try SwiftSoup.parse(html)
-
-        guard let hmac = try document.select("input[name=hmac]").first()?.`val`() else {
-            return nil
-        }
+    private func hmac(html: String) -> String? {
+        let document = try? SwiftSoup.parse(html)
+        let hmac = try? document?.select("input[name=hmac]").first()?.`val`()
 
         return hmac
     }

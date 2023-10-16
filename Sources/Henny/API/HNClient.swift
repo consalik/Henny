@@ -25,16 +25,6 @@ public class HNClient {
         
         return decoder
     }()
-    
-    // MARK: - Database
-    
-    internal func goOffline() {
-        database.goOffline()
-    }
-    
-    internal func goOnline() {
-        database.goOnline()
-    }
 
     // MARK: - Item
 
@@ -194,6 +184,16 @@ public class HNClient {
         }
         
         return user
+    }
+    
+    // MARK: - Database
+    
+    internal func goOffline() {
+        database.goOffline()
+    }
+    
+    internal func goOnline() {
+        database.goOnline()
     }
     
     // MARK: - Helpers
