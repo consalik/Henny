@@ -214,8 +214,16 @@ public class HNClient {
                 }
             }
         }
+        
+        let sortedItems = fetchedItems.sorted { lhs, rhs in
+            guard let lhsIndex = ids.firstIndex(of: lhs.id),
+                  let rhsIndex = ids.firstIndex(of: rhs.id) else {
+                return false
+            }
+            return lhsIndex < rhsIndex
+        }
 
-        return fetchedItems
+        return sortedItems
     }
     
     private func createItemStream(with ids: [Int], limit: Int? = nil, offset: Int = 0) -> AsyncStream<HNItem> {
