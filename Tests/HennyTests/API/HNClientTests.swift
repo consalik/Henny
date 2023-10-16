@@ -165,7 +165,7 @@ final class HNClientTests: XCTestCase {
     
     // MARK: - Stories (Stream)
     
-    func testShouldFetchStories() async {
+    func testStoriesStreamShouldContainStories() async {
         var stories: [HNItem] = []
         
         for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!) {
@@ -175,7 +175,30 @@ final class HNClientTests: XCTestCase {
         XCTAssertGreaterThan(stories.count, 0)
     }
 
-    func testShouldFetchStoriesWithLimit() async {
+    func testStoriesStreamShouldNotContainDuplicates() async {
+        var stories: [HNItem] = []
+        
+        for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!) {
+            stories.append(story)
+        }
+
+        XCTAssertEqual(stories.count, Set(stories).count)
+    }
+
+    func testStoriesStreamShouldPersistOrder() async {
+        let storyType = HNStoryType.allCases.randomElement()!
+        let storyIds = await HNClient.shared.storyIds(type: storyType)
+
+        var stories: [HNItem] = []
+
+        for await story in HNClient.shared.storyItems(type: storyType) {
+            stories.append(story)
+        }
+
+        XCTAssertEqual(stories.map { $0.id }, storyIds)
+    }
+
+    func testStoriesStreamShouldFetchStoriesWithLimit() async {
         var stories: [HNItem] = []
         
         for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!, limit: 10) {
@@ -185,7 +208,7 @@ final class HNClientTests: XCTestCase {
         XCTAssertEqual(stories.count, 10)
     }
 
-    func testShouldFetchStoriesWithLimitAndOffset() async {
+    func testStoriesStreamShouldFetchStoriesWithLimitAndOffset() async {
         var stories: [HNItem] = []
         
         for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!, limit: 10, offset: 10) {
@@ -195,7 +218,7 @@ final class HNClientTests: XCTestCase {
         XCTAssertEqual(stories.count, 10)
     }
 
-    func testShouldFetchStoriesWithLimitAndOffsetBeyondList() async {
+    func testStoriesStreamShouldFetchStoriesWithLimitAndOffsetBeyondList() async {
         var stories: [HNItem] = []
         
         for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!, limit: 10, offset: 1000) {
@@ -205,7 +228,7 @@ final class HNClientTests: XCTestCase {
         XCTAssertEqual(stories.count, 0)
     }
 
-    func testShouldFetchStoriesWithLimitAndZeroOffset() async {
+    func testStoriesStreamShouldFetchStoriesWithLimitAndZeroOffset() async {
         var stories: [HNItem] = []
         
         for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!, limit: 10, offset: 0) {
@@ -215,7 +238,7 @@ final class HNClientTests: XCTestCase {
         XCTAssertEqual(stories.count, 10)
     }
 
-    func testShouldFetchStoriesWithZeroLimitAndOffset() async {
+    func testStoriesStreamShouldFetchStoriesWithZeroLimitAndOffset() async {
         var stories: [HNItem] = []
         
         for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!, limit: 0, offset: 0) {
@@ -225,7 +248,7 @@ final class HNClientTests: XCTestCase {
         XCTAssertEqual(stories.count, 0)
     }
 
-    func testShouldFetchStoriesWithZeroLimitAndOffsetBeyondList() async {
+    func testStoriesStreamShouldFetchStoriesWithZeroLimitAndOffsetBeyondList() async {
         var stories: [HNItem] = []
         
         for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!, limit: 0, offset: 1000) {
