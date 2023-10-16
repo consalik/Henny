@@ -99,7 +99,7 @@ public extension HNItem {
 
 public extension HNItem {
     var hnURL: URL {
-        URL(string: "\(HNURL.website)/item?id=\(id)")!
+        HNURL.Website.item(id: id)
     }
     
     var document: Bool {
@@ -114,42 +114,7 @@ public extension HNItem {
         return titleHTML?.contains("[video]") ?? false
     }
     
-    var text: String? {
-        guard let textHTML = textHTML else {
-            return nil
-        }
-
-        let data = Data(textHTML.utf8)
-        let attributedString = try? NSAttributedString(
-            data: data,
-            options: [
-                .documentType: NSAttributedString.DocumentType.html,
-                .characterEncoding: String.Encoding.utf8.rawValue
-            ],
-            documentAttributes: nil
-        )
-
-        return attributedString?.string
-    }
-    
-    var markdown: LocalizedStringKey? {
-        guard let textHTML else {
-            return nil
-        }
-        
-        var markdown = textHTML
-        
-        markdown = markdown
-            .replacingOccurrences(of: "<i>", with: "*")
-            .replacingOccurrences(of: "</i>", with: "*")
-
-            .replacingOccurrences(of: "<b>", with: "**")
-            .replacingOccurrences(of: "</b>", with: "**")
-
-            .replacingOccurrences(of: "<p>", with: "\n\n")
-        
-        let cleanMarkdown = LocalizedStringKey(markdown)
-        
-        return cleanMarkdown
+    var delayed: Bool {
+        textHTML == "[delayed]"
     }
 }

@@ -84,24 +84,6 @@ public struct HNAuthClient {
         return userSettings
     }
     
-    public func updateUserSettings(userSettings: HNUserSettings) async throws {
-        guard signedIn() else {
-            throw UpdateUserSettingsError.notSignedIn
-        }
-        
-        let username = try username()
-        
-        guard let html = try await htmlForUser(username: username) else {
-            throw UpdateUserSettingsError.couldNotConvertUserPage
-        }
-        
-        guard let hmac = try hmac(html: html) else {
-            throw UpdateUserSettingsError.invalidHmac
-        }
-        
-        
-    }
-    
     // MARK: - Voting
     
     public func vote(id: Int, direction: HNVoteDirection) async throws {
@@ -170,13 +152,7 @@ public struct HNAuthClient {
     }
     
     private func vote(id: Int, direction: HNVoteDirection, authToken: String) async throws {
-        let voteURL = HNURL.HackerNews.vote.url
-            .appending(queryItems: [
-                URLQueryItem(name: "id", value: "\(id)"),
-                URLQueryItem(name: "how", value: "\(direction.rawValue)"),
-                URLQueryItem(name: "auth", value: "\(authToken)"),
-            ])
-
+        let voteURL = HNURL.Website.vote(id: id, how: direction.rawValue, auth: authToken)
         let (_, _) = try await URLSession.shared.data(from: voteURL)
     }
     
@@ -199,12 +175,7 @@ public struct HNAuthClient {
     // MARK: - HTML
     
     private func htmlForItem(id: Int) async throws -> String? {
-        let itemURL = HNURL.website
-            .appendingPathComponent("item")
-            .appending(queryItems: [
-                URLQueryItem(name: "id", value: "\(id)")
-            ])
-        
+        let itemURL = HNURL.Website.item(id: id)
         let (data, _) = try await URLSession.shared.data(from: itemURL)
 
         guard let html = String(data: data, encoding: .utf8) else {
@@ -215,12 +186,7 @@ public struct HNAuthClient {
     }
     
     private func htmlForUser(username: String) async throws -> String? {
-        let userURL = HNURL.website
-            .appendingPathComponent("user")
-            .appending(queryItems: [
-                URLQueryItem(name: "id", value: username)
-            ])
-        
+        let userURL = HNURL.Website.user(id: username)
         let (data, _) = try await URLSession.shared.data(from: userURL)
         
         guard let html = String(data: data, encoding: .utf8) else {

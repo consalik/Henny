@@ -19,27 +19,6 @@ public struct HNUser: Codable {
 
 public extension HNUser {
     var hnURL: URL {
-        return URL(string: "\(HNURL.website)/user?id=\(username)")!
-    }
-    
-    var bioMarkdown: LocalizedStringKey? {
-        guard let bioHTML else {
-            return nil
-        }
-        
-        var bioMarkdown = bioHTML
-        
-        bioMarkdown = bioMarkdown
-            .replacingOccurrences(of: "<i>", with: "*")
-            .replacingOccurrences(of: "</i>", with: "*")
-
-            .replacingOccurrences(of: "<b>", with: "**")
-            .replacingOccurrences(of: "</b>", with: "**")
-
-            .replacingOccurrences(of: "<p>", with: "\n\n")
-        
-        let cleanBioMarkdown = LocalizedStringKey(bioMarkdown)
-        
-        return cleanBioMarkdown
+        HNURL.Website.user(id: username)
     }
 }
