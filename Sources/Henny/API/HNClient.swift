@@ -67,7 +67,7 @@ public class HNClient {
     // MARK: - Comments
     
     public func comments(forItem item: HNItem) async -> [HNComment] {
-        let topLevelComments = await items(ids: item.commentIds)
+        let topLevelComments = await items(ids: item.commentsIds)
         
         var nodes: [HNComment] = []
         for topLevelComment in topLevelComments {
@@ -84,7 +84,7 @@ public class HNClient {
     public func comments(forItem item: HNItem) -> AsyncStream<HNComment> {
         AsyncStream(HNComment.self) { continuation in
             Task {
-                let topLevelComments = await items(ids: item.commentIds)
+                let topLevelComments = await items(ids: item.commentsIds)
                 
                 var nodes: [HNComment] = []
                 for topLevelComment in topLevelComments {

@@ -9,7 +9,7 @@ public struct HNItem: Codable, Identifiable, Hashable {
     public let submitted: Date
     public let textHTML: String?
     public let dead: Bool
-    public let commentIds: [Int]
+    public let commentsIds: [Int]
     public let url: URL?
     public let score: Int
     public let titleHTML: String?
@@ -44,7 +44,7 @@ public struct HNItem: Codable, Identifiable, Hashable {
         self.submitted = submitted
         self.textHTML = textHTML
         self.dead = dead
-        self.commentIds = commentIds
+        self.commentsIds = commentIds
         self.url = url
         self.score = score
         self.titleHTML = titleHTML
@@ -66,7 +66,7 @@ public extension HNItem {
         submitted = try container.decode(Date.self, forKey: .submitted)
         textHTML = try container.decodeIfPresent(String.self, forKey: .textHTML)
         dead = try container.decodeIfPresent(Bool.self, forKey: .dead) ?? false
-        commentIds = try container.decodeIfPresent([Int].self, forKey: .commentIds) ?? []
+        commentsIds = try container.decodeIfPresent([Int].self, forKey: .commentIds) ?? []
         url = try container.decodeIfPresent(URL.self, forKey: .url)
         score = try container.decodeIfPresent(Int.self, forKey: .score) ?? 0
         titleHTML = try container.decodeIfPresent(String.self, forKey: .titleHTML)
@@ -86,7 +86,7 @@ public extension HNItem {
         try container.encode(submitted, forKey: .submitted)
         try container.encode(textHTML, forKey: .textHTML)
         try container.encode(dead, forKey: .dead)
-        try container.encode(commentIds, forKey: .commentIds)
+        try container.encode(commentsIds, forKey: .commentIds)
         try container.encode(url, forKey: .url)
         try container.encode(score, forKey: .score)
         try container.encode(titleHTML, forKey: .titleHTML)
