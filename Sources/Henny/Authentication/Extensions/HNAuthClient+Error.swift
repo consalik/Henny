@@ -44,4 +44,11 @@ public extension HNAuthClient {
         case couldNotConvertUserPage
         case invalidHmac
     }
+    
+    enum SubmitError: Error {
+        case notSignedIn
+        case couldNotConvertSubmitPage
+        case invalidFnId
+        case invalidFnOp
+    }
 }

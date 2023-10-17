@@ -22,7 +22,7 @@ public struct HNAuthClient {
             throw SignInError.alreadySignedIn
         }
         
-        let request = signInRequest(username: username, password: password)
+        let request = signInRequest(acct: username, pw: password)
         let (data, _) = try await URLSession.shared.data(for: request)
         
         guard let html = String(data: data, encoding: .utf8) else {
@@ -65,7 +65,7 @@ public struct HNAuthClient {
             throw UserSettingsError.invalidUserSettings // TODO
         }
         
-        guard let html = try await fetchHtmlForUser(username: username) else {
+        guard let html = try await fetchHtml(from: HNURL.Website.user(id: username)) else {
             throw UserSettingsError.couldNotConvertUserPage
         }
         
@@ -83,7 +83,7 @@ public struct HNAuthClient {
             throw VoteError.notSignedIn
         }
         
-        guard let html = try await fetchHtmlForItem(id: id) else {
+        guard let html = try await fetchHtml(from: HNURL.Website.item(id: id)) else {
             throw VoteError.couldNotConvertItemPage
         }
         
@@ -112,22 +112,34 @@ public struct HNAuthClient {
         }
     }
     
-    // MARK: - Helpers
+    // MARK: - Submissions
     
-    private func fetchHtmlForItem(id: Int) async throws -> String? {
-        let itemURL = HNURL.Website.item(id: id)
-        let (data, _) = try await URLSession.shared.data(from: itemURL)
-
-        guard let html = String(data: data, encoding: .utf8) else {
-            return nil
+    public func submit(title: String, url: URL?, text: String?) async throws {
+        guard signedIn() else {
+            throw SubmitError.notSignedIn
         }
-    
-        return html
+        
+        guard let html = try await fetchHtml(from: HNURL.HackerNews.submit.url) else {
+            throw SubmitError.couldNotConvertSubmitPage
+        }
+        
+        guard let fnId = fnId(html: html) else {
+            throw SubmitError.invalidFnId
+        }
+        
+        guard let fnOp = fnOp(html: html) else {
+            throw SubmitError.invalidFnOp
+        }
+        
+        let submission = HNSubmission(fnId: fnId, fnOp: fnOp, title: title, url: url, text: text)
+        let request = submitRequest(submission: submission)
+        let (data, response) = try await URLSession.shared.data(for: request)
     }
     
-    private func fetchHtmlForUser(username: String) async throws -> String? {
-        let userURL = HNURL.Website.user(id: username)
-        let (data, _) = try await URLSession.shared.data(from: userURL)
+    // MARK: - Helpers
+
+    private func fetchHtml(from url: URL) async throws -> String? {
+        let (data, _) = try await URLSession.shared.data(from: url)
         
         guard let html = String(data: data, encoding: .utf8) else {
             return nil
@@ -150,7 +162,7 @@ public struct HNAuthClient {
             throw VoteError.notSignedIn
         }
         
-        guard let html = try await fetchHtmlForItem(id: id) else {
+        guard let html = try await fetchHtml(from: HNURL.Website.item(id: id)) else {
             throw VoteError.couldNotConvertItemPage
         }
         
@@ -181,13 +193,23 @@ public struct HNAuthClient {
     
     // MARK: - Requests
     
-    private func signInRequest(username: String, password: String) -> URLRequest {
+    private func signInRequest(acct: String, pw: String) -> URLRequest {
         var request = URLRequest(url: HNURL.HackerNews.login.url)
-        let body = "acct=\(username)&pw=\(password)"
+        let body = "acct=\(acct)&pw=\(pw)"
 
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = body.data(using: .utf8)
+
+        return request
+    }
+
+    private func submitRequest(submission: HNSubmission) -> URLRequest {
+        var request = URLRequest(url: HNURL.HackerNews.r.url)
+
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = submission.httpBody
 
         return request
     }
@@ -250,6 +272,20 @@ public struct HNAuthClient {
     private func hmac(html: String) -> String? {
         let document = try? SwiftSoup.parse(html)
         let hmac = try? document?.select("input[name=hmac]").first()?.`val`()
+
+        return hmac
+    }
+    
+    private func fnId(html: String) -> String? {
+        let document = try? SwiftSoup.parse(html)
+        let hmac = try? document?.select("input[name=fnid]").first()?.`val`()
+
+        return hmac
+    }
+    
+    private func fnOp(html: String) -> String? {
+        let document = try? SwiftSoup.parse(html)
+        let hmac = try? document?.select("input[name=fnop]").first()?.`val`()
 
         return hmac
     }

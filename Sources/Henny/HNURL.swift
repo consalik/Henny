@@ -72,6 +72,8 @@ public extension HNURL {
         case item
         case user
         case xuser
+        case submit
+        case r
 
         var url: URL {
             return HNURL.website.appendingPathComponent(self.rawValue)

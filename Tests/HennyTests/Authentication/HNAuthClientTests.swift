@@ -128,4 +128,32 @@ final class HNAuthClientTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
     }
+    
+    // MARK: - Submissions
+    
+    func testSubmissionsShouldNotBeAbleToSubmitIfNotSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+
+        do {
+            try await HNAuthClient.shared.submit(title: "Test", url: nil, text: nil)
+            XCTFail("Should not be able to submit if not signed in")
+        } catch let error as HNAuthClient.SubmitError {
+            XCTAssertEqual(error, HNAuthClient.SubmitError.notSignedIn)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+    
+    func testSubmissionsShouldBeAbleToSubmitIfSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+
+        do {
+            try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
+            XCTAssertTrue(HNAuthClient.shared.signedIn())
+
+            try await HNAuthClient.shared.submit(title: "Test", url: nil, text: "test")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
 }
