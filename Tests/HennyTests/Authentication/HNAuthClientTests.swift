@@ -53,25 +53,46 @@ final class HNAuthClientTests: XCTestCase {
         }
     }
     
-    // MARK: - User
+    // MARK: - User Name
 
-    func testShouldNotReturnUsernameIfNotSignedIn() async throws {
+    func testShouldNotReturnUserNameIfNotSignedIn() async throws {
         XCTAssertFalse(HNAuthClient.shared.signedIn())
         
-        let username = HNAuthClient.shared.username()
+        let username = HNAuthClient.shared.userName
         
         XCTAssertNil(username)
     }
 
-    func testShouldReturnUsernameIfSignedIn() async throws {
+    func testShouldReturnUserNameIfSignedIn() async throws {
         XCTAssertFalse(HNAuthClient.shared.signedIn())
         
         try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
         XCTAssertTrue(HNAuthClient.shared.signedIn())
         
-        let username = HNAuthClient.shared.username()
+        let username = HNAuthClient.shared.userName
         
         XCTAssertNotNil(username)
+    }
+    
+    // MARK: - User Cookie
+
+    func testShouldNotReturnUserCookieIfNotSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+        
+        let cookie = HNAuthClient.shared.userCookie
+        
+        XCTAssertNil(cookie)
+    }
+
+    func testShouldReturnUserCookieIfSignedIn() async throws {
+        XCTAssertFalse(HNAuthClient.shared.signedIn())
+        
+        try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
+        XCTAssertTrue(HNAuthClient.shared.signedIn())
+        
+        let cookie = HNAuthClient.shared.userCookie
+        
+        XCTAssertNotNil(cookie)
     }
 
     // MARK: - User Settings
@@ -131,29 +152,29 @@ final class HNAuthClientTests: XCTestCase {
     
     // MARK: - Submissions
     
-    func testSubmissionsShouldNotBeAbleToSubmitIfNotSignedIn() async throws {
-        XCTAssertFalse(HNAuthClient.shared.signedIn())
-
-        do {
-            try await HNAuthClient.shared.submit(title: "Test", url: nil, text: nil)
-            XCTFail("Should not be able to submit if not signed in")
-        } catch let error as HNAuthClient.SubmitError {
-            XCTAssertEqual(error, HNAuthClient.SubmitError.notSignedIn)
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
-    
-    func testSubmissionsShouldBeAbleToSubmitIfSignedIn() async throws {
-        XCTAssertFalse(HNAuthClient.shared.signedIn())
-
-        do {
-            try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
-            XCTAssertTrue(HNAuthClient.shared.signedIn())
-
-            try await HNAuthClient.shared.submit(title: "Test", url: nil, text: "test")
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
+//    func testSubmissionsShouldNotBeAbleToSubmitIfNotSignedIn() async throws {
+//        XCTAssertFalse(HNAuthClient.shared.signedIn())
+//
+//        do {
+//            try await HNAuthClient.shared.submit(title: "Test", url: nil, text: nil)
+//            XCTFail("Should not be able to submit if not signed in")
+//        } catch let error as HNAuthClient.SubmitError {
+//            XCTAssertEqual(error, HNAuthClient.SubmitError.notSignedIn)
+//        } catch {
+//            XCTFail("Unexpected error: \(error)")
+//        }
+//    }
+//    
+//    func testSubmissionsShouldBeAbleToSubmitIfSignedIn() async throws {
+//        XCTAssertFalse(HNAuthClient.shared.signedIn())
+//
+//        do {
+//            try await HNAuthClient.shared.signIn(username: HennyTests.validUsername, password: HennyTests.validPassword)
+//            XCTAssertTrue(HNAuthClient.shared.signedIn())
+//
+//            try await HNAuthClient.shared.submit(title: "Test", url: nil, text: "test")
+//        } catch {
+//            XCTFail("Unexpected error: \(error)")
+//        }
+//    }
 }

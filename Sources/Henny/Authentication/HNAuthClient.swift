@@ -52,8 +52,12 @@ public struct HNAuthClient {
     
     /// The username of the signed in user.
     /// Returns `nil` if the user is not signed in.
-    public func username() -> String? {
+    public var userName: String? {
         extractUsernameFromCookie()
+    }
+    
+    public var userCookie: HTTPCookie? {
+        cookie(named: "user")
     }
     
     public func userSettings() async throws -> HNUserSettings {
@@ -61,7 +65,7 @@ public struct HNAuthClient {
             throw UserSettingsError.notSignedIn
         }
         
-        guard let username = username() else {
+        guard let username = userName else {
             throw UserSettingsError.invalidUserSettings // TODO
         }
         
@@ -114,27 +118,27 @@ public struct HNAuthClient {
     
     // MARK: - Submissions
     
-    public func submit(title: String, url: URL?, text: String?) async throws {
-        guard signedIn() else {
-            throw SubmitError.notSignedIn
-        }
-        
-        guard let html = try await fetchHtml(from: HNURL.HackerNews.submit.url) else {
-            throw SubmitError.couldNotConvertSubmitPage
-        }
-        
-        guard let fnId = fnId(html: html) else {
-            throw SubmitError.invalidFnId
-        }
-        
-        guard let fnOp = fnOp(html: html) else {
-            throw SubmitError.invalidFnOp
-        }
-        
-        let submission = HNSubmission(fnId: fnId, fnOp: fnOp, title: title, url: url, text: text)
-        let request = submitRequest(submission: submission)
-        let (data, response) = try await URLSession.shared.data(for: request)
-    }
+//    public func submit(title: String, url: URL?, text: String?) async throws {
+//        guard signedIn() else {
+//            throw SubmitError.notSignedIn
+//        }
+//        
+//        guard let html = try await fetchHtml(from: HNURL.HackerNews.submit.url) else {
+//            throw SubmitError.couldNotConvertSubmitPage
+//        }
+//        
+//        guard let fnId = fnId(html: html) else {
+//            throw SubmitError.invalidFnId
+//        }
+//        
+//        guard let fnOp = fnOp(html: html) else {
+//            throw SubmitError.invalidFnOp
+//        }
+//        
+//        let submission = HNSubmission(fnId: fnId, fnOp: fnOp, title: title, url: url, text: text)
+//        let request = submitRequest(submission: submission)
+//        let (data, response) = try await URLSession.shared.data(for: request)
+//    }
     
     // MARK: - Helpers
 
@@ -173,7 +177,9 @@ public struct HNAuthClient {
     
     private func cookie(named name: String) -> HTTPCookie? {
         let cookies = HTTPCookieStorage.shared.cookies(for: HNURL.HackerNews.login.url) ?? []
-        return cookies.first { $0.name == name }
+        let cookie = cookies.first { $0.name == name }
+        
+        return cookie
     }
     
     private func extractUsernameFromCookie() -> String? {
