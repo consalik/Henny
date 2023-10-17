@@ -6,14 +6,14 @@ public struct HNUser: Codable {
     public let joined: Date
     public let karma: Int
     public let bioHTML: String?
-    public let submissions: [Int]?
+    public let submissionsIds: [Int]?
 
     private enum CodingKeys: String, CodingKey {
         case username = "id"
         case joined = "created"
         case karma
         case bioHTML = "about"
-        case submissions = "submitted"
+        case submissionsIds = "submitted"
     }
 }
 
