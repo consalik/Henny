@@ -51,4 +51,8 @@ public extension HNUser {
     var hnURL: URL {
         HNURL.Website.user(id: username)
     }
+    
+    var hasSubmissions: Bool {
+        submissionsIds.count > 0
+    }
 }
