@@ -36,7 +36,7 @@ public struct HNItem: Codable, Identifiable, Hashable {
         case commentCount = "descendants"
     }
 
-    init(id: Int, deleted: Bool, type: HNItemType, author: String, submitted: Date, textHTML: String?, dead: Bool, commentsIds: [Int], url: URL?, score: Int, titleHTML: String?, pollOptionsIds: [Int], pollId: Int?, parentId: Int?, commentCount: Int) {
+    public init(id: Int, deleted: Bool, type: HNItemType, author: String, submitted: Date, textHTML: String?, dead: Bool, commentsIds: [Int], url: URL?, score: Int, titleHTML: String?, pollOptionsIds: [Int], pollId: Int?, parentId: Int?, commentCount: Int) {
         self.id = id
         self.deleted = deleted
         self.type = type
