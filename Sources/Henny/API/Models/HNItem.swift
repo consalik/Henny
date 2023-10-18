@@ -69,7 +69,10 @@ public extension HNItem {
         let isFromAlgolia = try algoliaContainer.decodeIfPresent(Int.self, forKey: .objectId) != nil
         
         if isFromAlgolia {
-            id = try algoliaContainer.decode(Int.self, forKey: .objectId)
+            let objectId = try algoliaContainer.decode(String.self, forKey: .objectId)
+            let objectIdToInt = Int(objectId)!
+            
+            id = objectIdToInt
             
             let tags = try algoliaContainer.decode([String].self, forKey: .tags)
             let typeTag = tags[0]
