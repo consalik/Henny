@@ -59,18 +59,16 @@ public struct HNItem: Codable, Identifiable, Hashable {
 public extension HNItem {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let isFromAlgolia = container.allKeys.contains { key in
-            AlgoliaCodingKeys(rawValue: key.stringValue) != nil
-        }
 
         type = try container.decode(HNItemType.self, forKey: .type)
         textHTML = try container.decodeIfPresent(String.self, forKey: .textHTML)
         url = try container.decodeIfPresent(URL.self, forKey: .url)
         titleHTML = try container.decodeIfPresent(String.self, forKey: .titleHTML)
         
+        let algoliaContainer = try decoder.container(keyedBy: AlgoliaCodingKeys.self)
+        let isFromAlgolia = try algoliaContainer.decodeIfPresent(Int.self, forKey: .objectId) != nil
+        
         if isFromAlgolia {
-            let algoliaContainer = try decoder.container(keyedBy: AlgoliaCodingKeys.self)
-
             id = try algoliaContainer.decode(Int.self, forKey: .objectId)
             deleted = false
             author = try algoliaContainer.decode(String.self, forKey: .author)
