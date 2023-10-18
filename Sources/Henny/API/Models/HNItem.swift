@@ -2,9 +2,6 @@ import Foundation
 import SwiftUI
 
 public struct HNItem: Codable, Identifiable, Hashable {
-
-    // MARK: - Hacker News
-
     public let id: Int
     public let deleted: Bool
     public let type: HNItemType
@@ -20,11 +17,6 @@ public struct HNItem: Codable, Identifiable, Hashable {
     public let pollId: Int?
     public let parentId: Int?
     public let commentCount: Int
-
-    // MARK: - Algolia
-
-    public let storyId: Int?
-    public let comments: [HNItem]
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -43,72 +35,27 @@ public struct HNItem: Codable, Identifiable, Hashable {
         case parentId = "parent"
         case commentCount = "descendants"
     }
-
-    private enum AlgoliaCodingKeys: String, CodingKey {
-        case author
-        case comments = "children"
-        case parentId
-        case score = "points"
-        case submitted = "created_at_i"
-        case storyId
-        case objectId
-        case commentCount = "num_comments"
-        case tags = "_tags"
-    }
 }
 
 public extension HNItem {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
+        id = try container.decode(Int.self, forKey: .id)
+        deleted = try container.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
+        type = try container.decode(HNItemType.self, forKey: .type)
+        author = try container.decode(String.self, forKey: .author)
+        submitted = try container.decode(Date.self, forKey: .submitted)
         textHTML = try container.decodeIfPresent(String.self, forKey: .textHTML)
+        dead = try container.decodeIfPresent(Bool.self, forKey: .dead) ?? false
+        commentsIds = try container.decodeIfPresent([Int].self, forKey: .commentIds) ?? []
         url = try container.decodeIfPresent(URL.self, forKey: .url)
+        score = try container.decodeIfPresent(Int.self, forKey: .score) ?? 0
         titleHTML = try container.decodeIfPresent(String.self, forKey: .titleHTML)
-        
-        let algoliaContainer = try decoder.container(keyedBy: AlgoliaCodingKeys.self)
-        let isFromAlgolia = try algoliaContainer.decodeIfPresent(Int.self, forKey: .objectId) != nil
-        
-        if isFromAlgolia {
-            let objectId = try algoliaContainer.decode(String.self, forKey: .objectId)
-            let objectIdToInt = Int(objectId)!
-            
-            id = objectIdToInt
-            
-            let tags = try algoliaContainer.decode([String].self, forKey: .tags)
-            let typeTag = tags[0]
-            let typeFromTag = HNItemType(rawValue: typeTag)!
-            type = typeFromTag
-            
-            deleted = false
-            author = try algoliaContainer.decode(String.self, forKey: .author)
-            submitted = try algoliaContainer.decode(Date.self, forKey: .submitted)
-            dead = false
-            commentsIds = []
-            score = try algoliaContainer.decodeIfPresent(Int.self, forKey: .score) ?? 0
-            pollOptionsIds = []
-            pollId = nil
-            parentId = try algoliaContainer.decodeIfPresent(Int.self, forKey: .parentId)
-            commentCount = try algoliaContainer.decodeIfPresent(Int.self, forKey: .commentCount) ?? 0
-
-            storyId = try algoliaContainer.decodeIfPresent(Int.self, forKey: .storyId)
-            comments = try algoliaContainer.decodeIfPresent([HNItem].self, forKey: .comments) ?? []
-        } else {
-            id = try container.decode(Int.self, forKey: .id)
-            type = try container.decode(HNItemType.self, forKey: .type)
-            deleted = try container.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
-            author = try container.decode(String.self, forKey: .author)
-            submitted = try container.decode(Date.self, forKey: .submitted)
-            dead = try container.decodeIfPresent(Bool.self, forKey: .dead) ?? false
-            commentsIds = try container.decodeIfPresent([Int].self, forKey: .commentIds) ?? []
-            score = try container.decodeIfPresent(Int.self, forKey: .score) ?? 0
-            pollOptionsIds = try container.decodeIfPresent([Int].self, forKey: .pollOptionsIds) ?? []
-            pollId = try container.decodeIfPresent(Int.self, forKey: .pollId)
-            parentId = try container.decodeIfPresent(Int.self, forKey: .parentId)
-            commentCount = try container.decodeIfPresent(Int.self, forKey: .commentCount) ?? 0
-            
-            storyId = nil
-            comments = []
-        }
+        pollOptionsIds = try container.decodeIfPresent([Int].self, forKey: .pollOptionsIds) ?? []
+        pollId = try container.decodeIfPresent(Int.self, forKey: .pollId)
+        parentId = try container.decodeIfPresent(Int.self, forKey: .parentId)
+        commentCount = try container.decodeIfPresent(Int.self, forKey: .commentCount) ?? 0
     }
 
     func encode(to encoder: Encoder) throws {
@@ -154,6 +101,6 @@ public extension HNItem {
     }
 
     var hasComments: Bool {
-        commentCount > 0 || comments.count > 0
+        commentCount > 0
     }
 }
