@@ -51,6 +51,8 @@ public struct HNItem: Codable, Identifiable, Hashable {
         case score = "points"
         case submitted = "created_at_i"
         case storyId
+        case objectId
+        case commentCount = "num_comments"
     }
 }
 
@@ -61,7 +63,6 @@ public extension HNItem {
             AlgoliaCodingKeys(rawValue: key.stringValue) != nil
         }
 
-        id = try container.decode(Int.self, forKey: .id)
         type = try container.decode(HNItemType.self, forKey: .type)
         textHTML = try container.decodeIfPresent(String.self, forKey: .textHTML)
         url = try container.decodeIfPresent(URL.self, forKey: .url)
@@ -69,7 +70,8 @@ public extension HNItem {
         
         if isFromAlgolia {
             let algoliaContainer = try decoder.container(keyedBy: AlgoliaCodingKeys.self)
-            
+
+            id = try algoliaContainer.decode(Int.self, forKey: .objectId)
             deleted = false
             author = try algoliaContainer.decode(String.self, forKey: .author)
             submitted = try algoliaContainer.decode(Date.self, forKey: .submitted)
@@ -79,11 +81,12 @@ public extension HNItem {
             pollOptionsIds = []
             pollId = nil
             parentId = try algoliaContainer.decodeIfPresent(Int.self, forKey: .parentId)
-            commentCount = 0
+            commentCount = try algoliaContainer.decodeIfPresent(Int.self, forKey: .commentCount) ?? 0
 
             storyId = try algoliaContainer.decodeIfPresent(Int.self, forKey: .storyId)
             comments = try algoliaContainer.decodeIfPresent([HNItem].self, forKey: .comments) ?? []
         } else {
+            id = try container.decode(Int.self, forKey: .id)
             deleted = try container.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
             author = try container.decode(String.self, forKey: .author)
             submitted = try container.decode(Date.self, forKey: .submitted)
