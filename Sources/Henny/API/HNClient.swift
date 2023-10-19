@@ -3,6 +3,7 @@ import FirebaseDatabase
 import FirebaseCore
 import FirebaseDatabaseSwift
 import OSLog
+import LinkPresentation
 
 public class HNClient {
     
@@ -55,13 +56,57 @@ public class HNClient {
             return []
         }
         
-        return await fetchItems(with: idsToFetch)
+        var fetchedItems = [HNItem]()
+
+        await withTaskGroup(of: HNItem?.self) { taskGroup in
+            for id in ids {
+                taskGroup.addTask {
+                    await self.item(id: id)
+                }
+            }
+
+            for await result in taskGroup {
+                if let item = result {
+                    fetchedItems.append(item)
+                }
+            }
+        }
+        
+        let sortedItems = fetchedItems.sorted { lhs, rhs in
+            guard let lhsIndex = ids.firstIndex(of: lhs.id),
+                  let rhsIndex = ids.firstIndex(of: rhs.id) else {
+                return false
+            }
+            return lhsIndex < rhsIndex
+        }
+
+        return sortedItems
     }
 
     // MARK: - Items (Stream)
 
     public func items(ids: [Int], limit: Int? = nil, offset: Int = 0) -> AsyncStream<HNItem> {
-        return createItemStream(with: ids, limit: limit, offset: offset)
+        AsyncStream(HNItem.self) { continuation in
+            Task {
+                let validIds = Array(ids[offset..<(limit.map { offset + $0 } ?? ids.count)])
+
+                await withTaskGroup(of: HNItem?.self) { taskGroup in
+                    for id in validIds {
+                        taskGroup.addTask {
+                            await self.item(id: id)
+                        }
+                    }
+
+                    for await result in taskGroup {
+                        if let item = result {
+                            continuation.yield(item)
+                        }
+                    }
+                }
+
+                continuation.finish()
+            }
+        }
     }
     
     // MARK: - Comments
@@ -198,56 +243,9 @@ public class HNClient {
     
     // MARK: - Helpers
     
-    private func fetchItems(with ids: [Int]) async -> [HNItem] {
-        var fetchedItems = [HNItem]()
-
-        await withTaskGroup(of: HNItem?.self) { taskGroup in
-            for id in ids {
-                taskGroup.addTask {
-                    await self.item(id: id)
-                }
-            }
-
-            for await result in taskGroup {
-                if let item = result {
-                    fetchedItems.append(item)
-                }
-            }
-        }
+    private func metadata(for url: URL) async -> LPLinkMetadata? {
+        let provider = LPMetadataProvider()
         
-        let sortedItems = fetchedItems.sorted { lhs, rhs in
-            guard let lhsIndex = ids.firstIndex(of: lhs.id),
-                  let rhsIndex = ids.firstIndex(of: rhs.id) else {
-                return false
-            }
-            return lhsIndex < rhsIndex
-        }
-
-        return sortedItems
-    }
-    
-    private func createItemStream(with ids: [Int], limit: Int? = nil, offset: Int = 0) -> AsyncStream<HNItem> {
-        AsyncStream(HNItem.self) { continuation in
-            Task {
-                let validIds = Array(ids[offset..<(limit.map { offset + $0 } ?? ids.count)])
-
-                await withTaskGroup(of: HNItem?.self) { taskGroup in
-                    for id in validIds {
-                        taskGroup.addTask {
-                            await self.item(id: id)
-                        }
-                    }
-
-                    for await result in taskGroup {
-                        if let item = result {
-                            continuation.yield(item)
-                        }
-                    }
-                }
-
-                continuation.finish()
-            }
-        }
+        return try? await provider.startFetchingMetadata(for: url)
     }
 }
-
