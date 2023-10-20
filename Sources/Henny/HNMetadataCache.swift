@@ -8,6 +8,58 @@ struct HNMetadataCache {
     private let fileManager = FileManager.default
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: String(describing: HNMetadataCache.self))
     
+    // MARK: - Settings
+    
+    private let metadataLifetime: TimeInterval = 86_400 // 24 hours
+    private let maxCacheSize = 1024 * 1024 * 100 // 100 MB
+    
+    // MARK: - Expiry
+    
+    private func metadataExpired(atPath path: String) -> Bool {
+        guard let attributes = try? fileManager.attributesOfItem(atPath: path),
+              let modificationDate = attributes[.modificationDate] as? Date else {
+            return true
+        }
+        
+        return Date.now.timeIntervalSince(modificationDate) > metadataLifetime
+    }
+    
+    // MARK: - Management
+    
+    private func clearCacheIfNeeded() throws {
+        let cacheDirectoryURL = try cacheDirectoryURL()
+        let contents = try fileManager.contentsOfDirectory(atPath: cacheDirectoryURL.path)
+        var totalSize: UInt64 = 0
+        var filesAndAttributes = [(url: URL, size: UInt64, lastAccessDate: Date)]()
+        
+        for filename in contents {
+            let fileURL = cacheDirectoryURL.appendingPathComponent(filename)
+            let attributes = try fileManager.attributesOfItem(atPath: fileURL.path)
+            
+            if let fileSize = attributes[.size] as? UInt64,
+               let modificationDate = attributes[.modificationDate] as? Date {
+                totalSize += fileSize
+                filesAndAttributes.append((url: fileURL, size: fileSize, lastAccessDate: modificationDate))
+            }
+        }
+        
+        if totalSize > maxCacheSize {
+            filesAndAttributes.sort { $0.lastAccessDate < $1.lastAccessDate }
+            
+            for file in filesAndAttributes {
+                try fileManager.removeItem(at: file.url)
+                
+                totalSize -= file.size
+                
+                if totalSize <= maxCacheSize {
+                    break
+                }
+            }
+        }
+    }
+    
+    // MARK: - URLs
+    
     private func cacheDirectoryURL() throws -> URL {
         do {
             let directoryURL = try fileManager
@@ -47,12 +99,15 @@ struct HNMetadataCache {
         }
     }
     
+    // MARK: - Lifecycle
+    
     func set(_ metadata: LPLinkMetadata, for url: URL) throws {
         let fileURL = try fileURL(for: url)
 
         do {
             let data = try NSKeyedArchiver.archivedData(withRootObject: metadata, requiringSecureCoding: true)
             try data.write(to: fileURL)
+            try clearCacheIfNeeded()
         } catch {
             logger.error("Failed to write metadata for \(url.absoluteString): \(error.localizedDescription)")
 
@@ -63,9 +118,8 @@ struct HNMetadataCache {
     func metadata(for url: URL) throws -> LPLinkMetadata? {
         let fileURL = try fileURL(for: url)
 
-        guard fileManager.fileExists(atPath: fileURL.path) else {
-            logger.debug("No metadata for \(url.absoluteString)")
-
+        guard fileManager.fileExists(atPath: fileURL.path),
+              !metadataExpired(atPath: fileURL.path) else {
             return nil
         }
 
