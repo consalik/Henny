@@ -7,6 +7,12 @@ struct HNMetadataCache {
     private let fileManager = FileManager.default
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: String(describing: HNMetadataCache.self))
     
+//    private func cacheDirectoryURL() throws -> URL {
+//        let directoryURL = try fileManager
+//            .url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+//            .appendingPathComponent("HNMetadataCache")
+//    }
+    
     private func fileURL(for url: URL) throws -> URL {
         let fileName = url.absoluteString.hashValue
         let fileNameString = String(fileName)
@@ -16,7 +22,7 @@ struct HNMetadataCache {
                 .url(for: .cachesDirectory,
                     in: .userDomainMask,
                     appropriateFor: nil,
-                    create: false)
+                    create: true)
                 .appendingPathComponent("HNMetadataCache")
                 .appendingPathComponent(fileNameString)
         } catch {
