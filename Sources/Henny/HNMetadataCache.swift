@@ -35,7 +35,7 @@ struct HNMetadataCache {
         return Date.now.timeIntervalSince(modificationDate) > metadataLifetime
     }
     
-    // MARK: - Management
+    // MARK: - Size
     
     private func clearCacheIfNeeded() throws {
         let cacheDirectoryURL = try cacheDirectoryURL()
