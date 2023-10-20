@@ -1,7 +1,11 @@
 import Foundation
 import SwiftUI
+import LinkPresentation
 
 public struct HNItem: Codable, Identifiable, Hashable {
+    
+    // MARK: - API
+    
     public let id: Int
     public let deleted: Bool
     public let type: HNItemType
@@ -53,6 +57,10 @@ public struct HNItem: Codable, Identifiable, Hashable {
         self.parentId = parentId
         self.commentCount = commentCount
     }
+    
+    // MARK: - Custom
+    
+    public var metadata: LPLinkMetadata?
 }
 
 public extension HNItem {

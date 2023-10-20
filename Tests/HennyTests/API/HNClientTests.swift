@@ -93,6 +93,28 @@ final class HNClientTests: XCTestCase {
         XCTAssertEqual(paginatedItems.count, 0)
     }
     
+    // MARK: - Items (Stream)
+    
+    func testItemsStreamShouldContainCorrectNumberOfItems() async {
+        var items: [HNItem] = []
+        
+        for await item in HNClient.shared.items(ids: HennyTests.validItemIds) {
+            items.append(item)
+        }
+
+        XCTAssertEqual(items.count, HennyTests.validItemIds.count)
+    }
+
+    func testItemsStreamWithMetadataShouldContainCorrectNumberOfItems() async {
+        var items: [HNItem] = []
+        
+        for await item in HNClient.shared.items(ids: HennyTests.validItemIds, metadata: true) {
+            items.append(item)
+        }
+
+        XCTAssertEqual(items.count, HennyTests.validItemIds.count)
+    }
+    
     // MARK: - Comments
     
     func testFetchCommentTreeForItemWithComments() async {

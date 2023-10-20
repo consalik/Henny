@@ -85,22 +85,38 @@ public class HNClient {
 
     // MARK: - Items (Stream)
 
-    public func items(ids: [Int], limit: Int? = nil, offset: Int = 0) -> AsyncStream<HNItem> {
+    public func items(ids: [Int], limit: Int? = nil, offset: Int = 0, metadata: Bool = false) -> AsyncStream<HNItem> {
         AsyncStream(HNItem.self) { continuation in
             Task {
                 let validIds = Array(ids[offset..<(limit.map { offset + $0 } ?? ids.count)])
 
-                await withTaskGroup(of: HNItem?.self) { taskGroup in
+                await withTaskGroup(of: (HNItem?, LPLinkMetadata?).self) { taskGroup in
                     for id in validIds {
                         taskGroup.addTask {
-                            await self.item(id: id)
+                            guard let item = await self.item(id: id) else {
+                                return (nil, nil)
+                            }
+                            
+                            guard metadata,
+                                  let url = item.url,
+                                  let metadata = await self.metadata(for: url) else {
+                                return (item, nil)
+                            }
+                            
+                            return (item, metadata)
                         }
                     }
 
-                    for await result in taskGroup {
-                        if let item = result {
-                            continuation.yield(item)
+                    for await (item, metadata) in taskGroup {
+                        guard var item else {
+                            continue
                         }
+                        
+                        if let metadata {
+                            item.metadata = metadata
+                        }
+                        
+                        continuation.yield(item)
                     }
                 }
 
