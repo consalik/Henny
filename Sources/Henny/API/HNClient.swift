@@ -192,13 +192,14 @@ public class HNClient {
 
     // MARK: - Stories (Stream)
     
-    public func storyItems(type: HNStoryType, limit: Int? = nil, offset: Int = 0) -> AsyncStream<HNItem> {
+    public func storyItems(type: HNStoryType, limit: Int? = nil, offset: Int = 0, metadata: Bool = false) -> AsyncStream<HNItem> {
         AsyncStream(HNItem.self) { continuation in
             Task {
                 let storyIds = await storyIds(type: type)
                 
                 guard offset < storyIds.count else {
                     continuation.finish()
+                    
                     return
                 }
 
@@ -207,27 +208,41 @@ public class HNClient {
 
                 guard !idsToFetch.isEmpty else {
                     continuation.finish()
+                    
                     return
                 }
 
-                await withTaskGroup(of: HNItem?.self) { taskGroup in
+                await withTaskGroup(of: (HNItem?, LPLinkMetadata?).self) { taskGroup in
                     for id in idsToFetch {
-                        taskGroup.addTask(priority: .high) {
-                            await self.item(id: id)
+                        taskGroup.addTask {
+                            guard let item = await self.item(id: id) else {
+                                return (nil, nil)
+                            }
+                            
+                            guard metadata,
+                                  let url = item.url,
+                                  let metadata = await self.metadata(for: url) else {
+                                return (item, nil)
+                            }
+                            
+                            return (item, metadata)
                         }
                     }
 
-                    var emittedIds = Set<Int>()
-
-                    for await itemOptional in taskGroup {
-                        if let item = itemOptional, !emittedIds.contains(item.id) {
-                            continuation.yield(item)
-                            emittedIds.insert(item.id)
+                    for await (item, metadata) in taskGroup {
+                        guard var item else {
+                            continue
                         }
+                        
+                        if let metadata {
+                            item.metadata = metadata
+                        }
+                        
+                        continuation.yield(item)
                     }
-
-                    continuation.finish()
                 }
+
+                continuation.finish()
             }
         }
     }
