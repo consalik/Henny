@@ -10,8 +10,19 @@ struct HNMetadataCache {
     
     // MARK: - Settings
     
-    private let metadataLifetime: TimeInterval = 86_400 // 24 hours
-    private let maxCacheSize = 1024 * 1024 * 100 // 100 MB
+    private let metadataLifetime: TimeInterval
+    private let maxCacheSize: UInt64
+    private let cacheDirectoryName: String
+
+    init(
+        metadataLifetime: TimeInterval = 86_400, // 24 hours
+        maxCacheSize: UInt64 = 1024 * 1024 * 100, // 100 MB
+        cacheDirectoryName: String = String(describing: HNMetadataCache.self)
+    ) {
+        self.metadataLifetime = metadataLifetime
+        self.maxCacheSize = maxCacheSize
+        self.cacheDirectoryName = cacheDirectoryName
+    }
     
     // MARK: - Expiry
     
@@ -64,7 +75,7 @@ struct HNMetadataCache {
         do {
             let directoryURL = try fileManager
                 .url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-                .appendingPathComponent("HNMetadataCache")
+                .appendingPathComponent(cacheDirectoryName)
             
             if !fileManager.fileExists(atPath: directoryURL.path) {
                 try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true, attributes: nil)
@@ -130,6 +141,23 @@ struct HNMetadataCache {
             return metadata
         } catch {
             logger.error("Failed to read metadata for \(url.absoluteString): \(error.localizedDescription)")
+
+            throw error
+        }
+    }
+
+    func clear() throws {
+        do {
+            let cacheDirectoryURL = try cacheDirectoryURL()
+            let contents = try fileManager.contentsOfDirectory(atPath: cacheDirectoryURL.path)
+
+            for filename in contents {
+                let fileURL = cacheDirectoryURL.appendingPathComponent(filename)
+
+                try fileManager.removeItem(at: fileURL)
+            }
+        } catch {
+            logger.error("Failed to clear cache: \(error.localizedDescription)")
 
             throw error
         }

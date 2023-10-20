@@ -12,4 +12,6 @@ struct HennyTests {
     
     static let validUsername = "hackr-test"
     static let validPassword = "hackr123"
+
+    static let urlWithMetadata = URL(string: "https://www.apple.com")!
 }
