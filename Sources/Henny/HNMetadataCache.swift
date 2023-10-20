@@ -63,6 +63,12 @@ struct HNMetadataCache {
     func metadata(for url: URL) throws -> LPLinkMetadata? {
         let fileURL = try fileURL(for: url)
 
+        guard fileManager.fileExists(atPath: fileURL.path) else {
+            logger.debug("No metadata for \(url.absoluteString)")
+
+            return nil
+        }
+
         do {
             let data = try Data(contentsOf: fileURL)
             let metadata = try NSKeyedUnarchiver.unarchivedObject(ofClass: LPLinkMetadata.self, from: data)
