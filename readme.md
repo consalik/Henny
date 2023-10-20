@@ -6,9 +6,11 @@ Henny uses Firebase Realtime Database to fetch data from the official Hacker New
 ## Features
 
 - Fast and efficient data fetching using Firebase RTDB, `async/await`, `URLSession`, and `Codable`.
+- Advanced data loading strategies like `AsyncStream<Element>`.
+- Metadata retrieval for links using Link Presentation.
 - Built-in caching for offline usage.
 - Paginate data with `limit` and `offset` parameters.
-- Comprehensive data types with additional computed properties for text formatting.
+- Comprehensive data types with additional computed properties.
 - Recursive data fetching for comments.
 - Support for authenticated requests to post, vote, and retrieve user settings.
 - Includes a testing suite for common use cases.
