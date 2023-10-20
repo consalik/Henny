@@ -9,6 +9,8 @@ public class HNClient {
     
     public static let shared = HNClient()
     
+    // MARK: - Firebase
+    
     private let database: Database
     private let databaseReference: DatabaseReference
     
@@ -26,6 +28,10 @@ public class HNClient {
         
         return decoder
     }()
+    
+    // MARK: - Cache
+    
+    private let metadataCache = HNMetadataCache()
 
     // MARK: - Item
 
@@ -275,8 +281,18 @@ public class HNClient {
     // MARK: - Helpers
     
     private func metadata(for url: URL) async -> LPLinkMetadata? {
+        if let metadata = try? metadataCache.metadata(for: url) {
+            return metadata
+        }
+        
         let provider = LPMetadataProvider()
         
-        return try? await provider.startFetchingMetadata(for: url)
+        guard let metadata = try? await provider.startFetchingMetadata(for: url) else {
+            return nil
+        }
+        
+        try? metadataCache.set(metadata, for: url)
+        
+        return metadata
     }
 }
