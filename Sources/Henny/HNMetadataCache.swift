@@ -7,50 +7,44 @@ struct HNMetadataCache {
     private let fileManager = FileManager.default
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: String(describing: HNMetadataCache.self))
     
-//    private func cacheDirectoryURL() throws -> URL {
-//        let directoryURL = try fileManager
-//            .url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-//            .appendingPathComponent("HNMetadataCache")
-//    }
+    private func cacheDirectoryURL() throws -> URL {
+        do {
+            let directoryURL = try fileManager
+                .url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+                .appendingPathComponent("HNMetadataCache")
+            
+            if !fileManager.fileExists(atPath: directoryURL.path) {
+                try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true, attributes: nil)
+            }
+            
+            return directoryURL
+        } catch {
+            logger.error("Failed to get cache directory URL: \(error.localizedDescription)")
+            
+            throw error
+        }
+    }
     
     private func fileURL(for url: URL) throws -> URL {
-        let fileName = url.absoluteString.hashValue
-        let fileNameString = String(fileName)
-        
         do {
-            return try fileManager
-                .url(for: .cachesDirectory,
-                    in: .userDomainMask,
-                    appropriateFor: nil,
-                    create: true)
-                .appendingPathComponent("HNMetadataCache")
+            let cacheDirectoryURL = try cacheDirectoryURL()
+            let fileName = url.absoluteString.hashValue
+            let fileNameString = String(fileName)
+            
+            return cacheDirectoryURL
                 .appendingPathComponent(fileNameString)
         } catch {
             logger.error("Failed to get file URL for \(url.absoluteString): \(error.localizedDescription)")
-
+            
             throw error
         }
     }
     
     func set(_ metadata: LPLinkMetadata, for url: URL) throws {
         let fileURL = try fileURL(for: url)
-        var data: Data?
 
         do {
-            data = try NSKeyedArchiver.archivedData(withRootObject: metadata, requiringSecureCoding: true)
-        } catch {
-            logger.error("Failed to archive metadata for \(url.absoluteString): \(error.localizedDescription)")
-
-            throw error
-        }
-        
-        guard let data else {
-            logger.error("Failed to archive metadata for \(url.absoluteString)")
-
-            return
-        }
-        
-        do {
+            let data = try NSKeyedArchiver.archivedData(withRootObject: metadata, requiringSecureCoding: true)
             try data.write(to: fileURL)
         } catch {
             logger.error("Failed to write metadata for \(url.absoluteString): \(error.localizedDescription)")
@@ -61,38 +55,16 @@ struct HNMetadataCache {
 
     func metadata(for url: URL) throws -> LPLinkMetadata? {
         let fileURL = try fileURL(for: url)
-        var data: Data?
 
         do {
-            data = try Data(contentsOf: fileURL)
+            let data = try Data(contentsOf: fileURL)
+            let metadata = try NSKeyedUnarchiver.unarchivedObject(ofClass: LPLinkMetadata.self, from: data)
+
+            return metadata
         } catch {
             logger.error("Failed to read metadata for \(url.absoluteString): \(error.localizedDescription)")
 
             throw error
         }
-
-        guard let data else {
-            logger.error("Failed to read metadata for \(url.absoluteString)")
-
-            return nil
-        }
-
-        var metadata: LPLinkMetadata?
-
-        do {
-            metadata = try NSKeyedUnarchiver.unarchivedObject(ofClass: LPLinkMetadata.self, from: data)
-        } catch {
-            logger.error("Failed to unarchive metadata for \(url.absoluteString): \(error.localizedDescription)")
-
-            throw error
-        }
-
-        guard let metadata else {
-            logger.error("Failed to unarchive metadata for \(url.absoluteString)")
-
-            return nil
-        }
-        
-        return metadata
     }
 }
