@@ -1,6 +1,7 @@
 import Foundation
 import LinkPresentation
 import OSLog
+import CryptoKit
 
 struct HNMetadataCache {
     
@@ -25,14 +26,20 @@ struct HNMetadataCache {
         }
     }
     
+    private func fileName(for url: URL) -> String {
+        let data = Data(url.absoluteString.utf8)
+        let digest = Insecure.SHA1.hash(data: data)
+        
+        return digest.map { String(format: "%02hhx", $0) }.joined()
+    }
+    
     private func fileURL(for url: URL) throws -> URL {
         do {
             let cacheDirectoryURL = try cacheDirectoryURL()
-            let fileName = url.absoluteString.hashValue
-            let fileNameString = String(fileName)
+            let fileName = fileName(for: url)
             
             return cacheDirectoryURL
-                .appendingPathComponent(fileNameString)
+                .appendingPathComponent(fileName)
         } catch {
             logger.error("Failed to get file URL for \(url.absoluteString): \(error.localizedDescription)")
             
