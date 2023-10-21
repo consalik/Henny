@@ -4,22 +4,21 @@ import FirebaseCore
 import FirebaseDatabaseSwift
 import OSLog
 import LinkPresentation
+import SwiftUI
 
 public class HNClient {
     
     public static let shared = HNClient()
     
+    // MARK: - Cache
+    
+    private let itemCache = NSCache<NSNumber, HNItem>()
+    private let metadataCache = HNMetadataCache()
+    
     // MARK: - Firebase
     
     private let database: Database
     private let databaseReference: DatabaseReference
-    
-    init() {
-        database = Database.database(url: HNURL.api(version: false).absoluteString)
-        database.isPersistenceEnabled = true
-        
-        databaseReference = database.reference(fromURL: HNURL.api().absoluteString)
-    }
     
     private let decoder: Database.Decoder = {
         let decoder = Database.Decoder()
@@ -29,29 +28,44 @@ public class HNClient {
         return decoder
     }()
     
-    // MARK: - Cache
+    // MARK: - General
     
-    private let metadataCache = HNMetadataCache()
+    private let notificationCenter = NotificationCenter.default
+    
+    // MARK: - Initialization
+    
+    init() {
+        database = Database.database(url: HNURL.api(version: false).absoluteString)
+        database.isPersistenceEnabled = true
+        
+        databaseReference = database.reference(fromURL: HNURL.api().absoluteString)
+        
+//        notificationCenter.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: nil) { [weak self] _ in
+//            self?.itemCache.removeAllObjects()
+//        }
+    }
 
     // MARK: - Item
 
     public func item(id: Int, metadata: Bool = false) async -> HNItem? {
+        if let item = itemCache.object(forKey: NSNumber(value: id)) {
+            return item
+        }
+        
         let reference = databaseReference
             .child("item")
             .child("\(id)")
         
         guard let snapshot = try? await reference.getData(),
-              var item = try? snapshot.data(as: HNItem.self, decoder: decoder) else {
+              let item = try? snapshot.data(as: HNItem.self, decoder: decoder) else {
             return nil
         }
         
-        guard metadata,
-              let url = item.url,
-              let metadata = await self.metadata(for: url) else {
-            return item
+        if metadata, let url = item.url, let metadata = await self.metadata(for: url) {
+            item.metadata = metadata
         }
         
-        item.metadata = metadata
+        itemCache.setObject(item, forKey: NSNumber(value: id))
         
         return item
     }

@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import LinkPresentation
 
-public struct HNItem: Codable, Identifiable, Hashable {
+public class HNItem: Codable, Identifiable {
     
     // MARK: - API
     
@@ -21,6 +21,10 @@ public struct HNItem: Codable, Identifiable, Hashable {
     public let pollId: Int?
     public let parentId: Int?
     public let commentCount: Int
+    
+    // MARK: - Custom
+    
+    public var metadata: LPLinkMetadata?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -39,32 +43,8 @@ public struct HNItem: Codable, Identifiable, Hashable {
         case parentId = "parent"
         case commentCount = "descendants"
     }
-
-    public init(id: Int, deleted: Bool, type: HNItemType, author: String, submitted: Date, textHTML: String?, dead: Bool, commentsIds: [Int], url: URL?, score: Int, titleHTML: String?, pollOptionsIds: [Int], pollId: Int?, parentId: Int?, commentCount: Int) {
-        self.id = id
-        self.deleted = deleted
-        self.type = type
-        self.author = author
-        self.submitted = submitted
-        self.textHTML = textHTML
-        self.dead = dead
-        self.commentsIds = commentsIds
-        self.url = url
-        self.score = score
-        self.titleHTML = titleHTML
-        self.pollOptionsIds = pollOptionsIds
-        self.pollId = pollId
-        self.parentId = parentId
-        self.commentCount = commentCount
-    }
     
-    // MARK: - Custom
-    
-    public var metadata: LPLinkMetadata?
-}
-
-public extension HNItem {
-    init(from decoder: Decoder) throws {
+    public required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         id = try container.decode(Int.self, forKey: .id)
@@ -84,7 +64,7 @@ public extension HNItem {
         commentCount = try container.decodeIfPresent(Int.self, forKey: .commentCount) ?? 0
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
 
         try container.encode(id, forKey: .id)
@@ -102,6 +82,24 @@ public extension HNItem {
         try container.encode(pollId, forKey: .pollId)
         try container.encode(parentId, forKey: .parentId)
         try container.encode(commentCount, forKey: .commentCount)
+    }
+    
+    public init(id: Int, deleted: Bool, type: HNItemType, author: String, submitted: Date, textHTML: String?, dead: Bool, commentsIds: [Int], url: URL?, score: Int, titleHTML: String?, pollOptionsIds: [Int], pollId: Int?, parentId: Int?, commentCount: Int) {
+        self.id = id
+        self.deleted = deleted
+        self.type = type
+        self.author = author
+        self.submitted = submitted
+        self.textHTML = textHTML
+        self.dead = dead
+        self.commentsIds = commentsIds
+        self.url = url
+        self.score = score
+        self.titleHTML = titleHTML
+        self.pollOptionsIds = pollOptionsIds
+        self.pollId = pollId
+        self.parentId = parentId
+        self.commentCount = commentCount
     }
 }
 
