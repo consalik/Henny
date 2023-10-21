@@ -96,6 +96,33 @@ public class HNClient {
 
         return sortedItems
     }
+
+    public func items(ids: [Int], limit: Int? = nil, offset: Int = 0, metadata: Bool = false, ordered: Bool = false) -> AsyncStream<HNItem> {
+        AsyncStream(HNItem.self) { continuation in
+            Task {
+                if offset >= ids.count {
+                    continuation.finish()
+                    return
+                }
+                
+                let endIndex = limit.map { min(offset + $0, ids.count) } ?? ids.count
+                let idsToFetch = Array(ids[offset..<endIndex])
+
+                if idsToFetch.isEmpty {
+                    continuation.finish()
+                    return
+                }
+
+                if ordered {
+                    await fetchAndYieldOrderedItems(ids: idsToFetch, metadata: metadata, continuation: continuation)
+                } else {
+                    await fetchAndYieldUnorderedItems(ids: idsToFetch, metadata: metadata, continuation: continuation)
+                }
+
+                continuation.finish()
+            }
+        }
+    }
     
     // MARK: - Comments
     
@@ -110,27 +137,6 @@ public class HNClient {
         }
         
         return nodes
-    }
-
-    public func comments(forItem item: HNItem) -> AsyncStream<HNComment> {
-        AsyncStream(HNComment.self) { continuation in
-            Task {
-                let topLevelComments = await items(ids: item.commentsIds)
-                
-                var nodes: [HNComment] = []
-                for topLevelComment in topLevelComments {
-                    let comments = await comments(forItem: topLevelComment)
-                    
-                    nodes.append(HNComment(item: topLevelComment, comments: comments))
-                }
-                
-                for node in nodes {
-                    continuation.yield(node)
-                }
-                
-                continuation.finish()
-            }
-        }
     }
 
     // MARK: - Stories
@@ -274,5 +280,4 @@ public class HNClient {
             }
         }
     }
-
 }
