@@ -129,4 +129,8 @@ public extension HNItem {
     var hasComments: Bool {
         commentCount > 0
     }
+    
+    var host: String? {
+        url?.host?.replacingOccurrences(of: "www.", with: "", options: .regularExpression)
+    }
 }
