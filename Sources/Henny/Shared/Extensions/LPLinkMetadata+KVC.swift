@@ -1,7 +1,7 @@
 import Foundation
 import LinkPresentation
 
-extension LPLinkMetadata {
+public extension LPLinkMetadata {
     
     var title: String? {
         self.value(forKey: "_title") as? String
