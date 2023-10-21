@@ -287,6 +287,8 @@ public class HNClient {
         
         let provider = LPMetadataProvider()
         
+        provider.shouldFetchSubresources = false
+        
         guard let metadata = try? await provider.startFetchingMetadata(for: url) else {
             return nil
         }
