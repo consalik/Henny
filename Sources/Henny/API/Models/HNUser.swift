@@ -55,4 +55,30 @@ public extension HNUser {
     var hasSubmissions: Bool {
         submissionsIds.count > 0
     }
+    
+    var emails: [String]? {
+        guard let bioHTML else {
+            return nil
+        }
+
+        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+        
+        guard let matches = detector?.matches(in: bioHTML, options: [], range: NSRange(location: 0, length: bioHTML.utf16.count)) else {
+            return nil
+        }
+        
+        var emails: [String] = []
+
+        for match in matches {
+            guard let range = Range(match.range, in: bioHTML),
+                  let url = URL(string: String(bioHTML[range])),
+                  url.absoluteString.contains("@") else {
+                continue
+            }
+            
+            emails.append(url.absoluteString)
+        }
+
+        return emails
+    }
 }
