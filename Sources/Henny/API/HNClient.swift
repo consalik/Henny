@@ -35,15 +35,23 @@ public class HNClient {
 
     // MARK: - Item
 
-    public func item(id: Int) async -> HNItem? {
+    public func item(id: Int, metadata: Bool = false) async -> HNItem? {
         let reference = databaseReference
             .child("item")
             .child("\(id)")
         
         guard let snapshot = try? await reference.getData(),
-              let item = try? snapshot.data(as: HNItem.self, decoder: decoder) else {
+              var item = try? snapshot.data(as: HNItem.self, decoder: decoder) else {
             return nil
         }
+        
+        guard metadata,
+              let url = item.url,
+              let metadata = await self.metadata(for: url) else {
+            return item
+        }
+        
+        item.metadata = metadata
         
         return item
     }
@@ -88,48 +96,6 @@ public class HNClient {
 
         return sortedItems
     }
-
-    // MARK: - Items (Stream)
-
-    public func items(ids: [Int], limit: Int? = nil, offset: Int = 0, metadata: Bool = false) -> AsyncStream<HNItem> {
-        AsyncStream(HNItem.self) { continuation in
-            Task {
-                let validIds = Array(ids[offset..<(limit.map { offset + $0 } ?? ids.count)])
-
-                await withTaskGroup(of: (HNItem?, LPLinkMetadata?).self) { taskGroup in
-                    for id in validIds {
-                        taskGroup.addTask {
-                            guard let item = await self.item(id: id) else {
-                                return (nil, nil)
-                            }
-                            
-                            guard metadata,
-                                  let url = item.url,
-                                  let metadata = await self.metadata(for: url) else {
-                                return (item, nil)
-                            }
-                            
-                            return (item, metadata)
-                        }
-                    }
-
-                    for await (item, metadata) in taskGroup {
-                        guard var item else {
-                            continue
-                        }
-                        
-                        if let metadata {
-                            item.metadata = metadata
-                        }
-                        
-                        continuation.yield(item)
-                    }
-                }
-
-                continuation.finish()
-            }
-        }
-    }
     
     // MARK: - Comments
     
@@ -145,8 +111,6 @@ public class HNClient {
         
         return nodes
     }
-
-    // MARK: - Comments (Stream)
 
     public func comments(forItem item: HNItem) -> AsyncStream<HNComment> {
         AsyncStream(HNComment.self) { continuation in
@@ -195,65 +159,8 @@ public class HNClient {
 
         return await items(ids: storyIdsToFetch)
     }
-
-    // MARK: - Stories (Stream)
     
-    public func storyItems(type: HNStoryType, limit: Int? = nil, offset: Int = 0, metadata: Bool = false) -> AsyncStream<HNItem> {
-        AsyncStream(HNItem.self) { continuation in
-            Task {
-                let storyIds = await storyIds(type: type)
-                
-                guard offset < storyIds.count else {
-                    continuation.finish()
-                    
-                    return
-                }
-
-                let endIndex = limit.map { min(offset + $0, storyIds.count) } ?? storyIds.count
-                let idsToFetch = Array(storyIds[offset..<endIndex])
-
-                guard !idsToFetch.isEmpty else {
-                    continuation.finish()
-                    
-                    return
-                }
-
-                await withTaskGroup(of: (HNItem?, LPLinkMetadata?).self) { taskGroup in
-                    for id in idsToFetch {
-                        taskGroup.addTask {
-                            guard let item = await self.item(id: id) else {
-                                return (nil, nil)
-                            }
-                            
-                            guard metadata,
-                                  let url = item.url,
-                                  let metadata = await self.metadata(for: url) else {
-                                return (item, nil)
-                            }
-                            
-                            return (item, metadata)
-                        }
-                    }
-
-                    for await (item, metadata) in taskGroup {
-                        guard var item else {
-                            continue
-                        }
-                        
-                        if let metadata {
-                            item.metadata = metadata
-                        }
-                        
-                        continuation.yield(item)
-                    }
-                }
-
-                continuation.finish()
-            }
-        }
-    }
-    
-    public func orderedStoryItems(type: HNStoryType, limit: Int? = nil, offset: Int = 0, metadata: Bool = false) -> AsyncStream<HNItem> {
+    public func storyItems(type: HNStoryType, limit: Int? = nil, offset: Int = 0, metadata: Bool = false, ordered: Bool = false) -> AsyncStream<HNItem> {
         AsyncStream(HNItem.self) { continuation in
             Task {
                 let storyIds = await storyIds(type: type)
@@ -271,36 +178,10 @@ public class HNClient {
                     return
                 }
 
-                var fetchedItems: [Int: HNItem] = [:]
-
-                await withTaskGroup(of: (Int, HNItem?).self) { taskGroup in
-                    for id in idsToFetch {
-                        taskGroup.addTask {
-                            guard let item = await self.item(id: id) else {
-                                return (id, nil)
-                            }
-
-                            if metadata, let url = item.url, let metadata = await self.metadata(for: url) {
-                                var itemWithMetadata = item
-                                itemWithMetadata.metadata = metadata
-                                return (id, itemWithMetadata)
-                            }
-                            
-                            return (id, item)
-                        }
-                    }
-
-                    for await (id, item) in taskGroup {
-                        if let item = item {
-                            fetchedItems[id] = item
-                        }
-                    }
-                }
-
-                for id in idsToFetch {
-                    if let item = fetchedItems[id] {
-                        continuation.yield(item)
-                    }
+                if ordered {
+                    await fetchAndYieldOrderedItems(ids: idsToFetch, metadata: metadata, continuation: continuation)
+                } else {
+                    await fetchAndYieldUnorderedItems(ids: idsToFetch, metadata: metadata, continuation: continuation)
                 }
 
                 continuation.finish()
@@ -353,4 +234,45 @@ public class HNClient {
         
         return metadata
     }
+    
+    private func fetchAndYieldOrderedItems(ids: [Int], metadata: Bool, continuation: AsyncStream<HNItem>.Continuation) async {
+        var fetchedItems: [Int: HNItem] = [:]
+
+        await withTaskGroup(of: (Int, HNItem?).self) { taskGroup in
+            for id in ids {
+                taskGroup.addTask {
+                    return (id, await self.item(id: id, metadata: metadata))
+                }
+            }
+
+            for await (id, item) in taskGroup {
+                if let item = item {
+                    fetchedItems[id] = item
+                }
+            }
+        }
+
+        for id in ids {
+            if let item = fetchedItems[id] {
+                continuation.yield(item)
+            }
+        }
+    }
+
+    private func fetchAndYieldUnorderedItems(ids: [Int], metadata: Bool, continuation: AsyncStream<HNItem>.Continuation) async {
+        await withTaskGroup(of: HNItem?.self) { taskGroup in
+            for id in ids {
+                taskGroup.addTask {
+                    return await self.item(id: id, metadata: metadata)
+                }
+            }
+
+            for await item in taskGroup {
+                if let item = item {
+                    continuation.yield(item)
+                }
+            }
+        }
+    }
+
 }
