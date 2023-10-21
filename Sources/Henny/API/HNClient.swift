@@ -253,6 +253,62 @@ public class HNClient {
         }
     }
     
+    public func orderedStoryItems(type: HNStoryType, limit: Int? = nil, offset: Int = 0, metadata: Bool = false) -> AsyncStream<HNItem> {
+        AsyncStream(HNItem.self) { continuation in
+            Task {
+                let storyIds = await storyIds(type: type)
+                
+                guard offset < storyIds.count else {
+                    continuation.finish()
+                    return
+                }
+
+                let endIndex = limit.map { min(offset + $0, storyIds.count) } ?? storyIds.count
+                let idsToFetch = Array(storyIds[offset..<endIndex])
+
+                guard !idsToFetch.isEmpty else {
+                    continuation.finish()
+                    return
+                }
+
+                var fetchedItems: [Int: HNItem] = [:]
+
+                await withTaskGroup(of: (Int, HNItem?).self) { taskGroup in
+                    for id in idsToFetch {
+                        taskGroup.addTask {
+                            guard let item = await self.item(id: id) else {
+                                return (id, nil)
+                            }
+
+                            if metadata, let url = item.url, let metadata = await self.metadata(for: url) {
+                                var itemWithMetadata = item
+                                itemWithMetadata.metadata = metadata
+                                return (id, itemWithMetadata)
+                            }
+                            
+                            return (id, item)
+                        }
+                    }
+
+                    for await (id, item) in taskGroup {
+                        if let item = item {
+                            fetchedItems[id] = item
+                        }
+                    }
+                }
+
+                for id in idsToFetch {
+                    if let item = fetchedItems[id] {
+                        continuation.yield(item)
+                    }
+                }
+
+                continuation.finish()
+            }
+        }
+    }
+
+    
     // MARK: - User
     
     public func user(username: String) async -> HNUser? {
