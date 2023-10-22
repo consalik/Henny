@@ -29,6 +29,10 @@ let package = Package(
       .package(
         url: "https://github.com/scinfu/SwiftSoup.git",
         .upToNextMajor(from: "2.6.1")
+      ),
+      .package(
+        url: "https://github.com/algolia/algoliasearch-client-swift",
+        .upToNextMajor(from: "8.18.2")
       )
     ],
     targets: [
@@ -39,7 +43,8 @@ let package = Package(
             dependencies: [
                 .product(name: "FirebaseDatabase", package: "firebase-ios-sdk"),
                 .product(name: "FirebaseDatabaseSwift", package: "firebase-ios-sdk"),
-                "SwiftSoup"
+                "SwiftSoup",
+                .product(name: "AlgoliaSearchClient", package: "algoliasearch-client-swift")
             ]
         ),
         .testTarget(
