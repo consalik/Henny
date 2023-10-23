@@ -5,15 +5,15 @@ Henny uses Firebase Realtime Database to fetch data from the official Hacker New
 
 ## Features
 
-- Fast and efficient data fetching using Firebase RTDB, `async/await`, `URLSession`, and `Codable`.
-- Advanced data loading strategies like `AsyncStream<Element>`.
-- Metadata retrieval for links using Link Presentation cached using LRU on disk.
-- Built-in caching for offline usage.
-- Paginate data with `limit` and `offset` parameters.
-- Comprehensive data types with additional computed properties.
-- Recursive data fetching for comments.
-- Support for authenticated requests to post, vote, and retrieve user settings.
-- Includes a testing suite for common use cases.
+- **Firebase**: Fast and efficient querying of the official Hacker News API using Firebase Realtime Database with support for persistence. The API includes comprehensive data types for all endpoints.
+- **Streaming**: Improve loading times and responsiveness by streaming items with `AsyncStream<Element>`.
+- **Metadata**: Retrieve metadata for items including images and summaries of websites using the Link Presentations framework.
+- **Caching**: Built-in caching for metadata and items including support for persistence.
+- **Pagination**: Paginate data with `limit` and `offset` parameters.
+- **Comments**: Recursively fetch comments for items.
+- **Authentication**: Sign in to your Hacker News account to vote, comment, and submit.
+- **Search**: Search for items on Hacker News using Algolia.
+- **Testing**: Includes a testing suite for common use cases.
 
 ## Usage
 
