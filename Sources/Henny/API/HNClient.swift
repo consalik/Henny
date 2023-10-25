@@ -13,6 +13,7 @@ public class HNClient {
     // MARK: - Cache
     
     private let itemCache = NSCache<NSNumber, HNItem>()
+    private let userCache = NSCache<NSString, HNUser>()
     private let metadataCache = HNMetadataCache()
     
     // MARK: - Firebase
@@ -213,6 +214,10 @@ public class HNClient {
     // MARK: - User
     
     public func user(username: String) async -> HNUser? {
+        if let user = userCache.object(forKey: NSString(string: username)) {
+            return user
+        }
+        
         let reference = databaseReference
             .child("user")
             .child(username)
@@ -221,6 +226,8 @@ public class HNClient {
               let user = try? snapshot.data(as: HNUser.self, decoder: decoder) else {
             return nil
         }
+        
+        userCache.setObject(user, forKey: NSString(string: username))
         
         return user
     }
