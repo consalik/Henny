@@ -40,10 +40,6 @@ public class HNClient {
         database.isPersistenceEnabled = true
         
         databaseReference = database.reference(fromURL: HNURL.api().absoluteString)
-        
-//        notificationCenter.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: nil) { [weak self] _ in
-//            self?.itemCache.removeAllObjects()
-//        }
     }
 
     // MARK: - Item

@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import LinkPresentation
 
-public class HNItem: Codable, Identifiable {
+public class HNItem: Codable, Identifiable, Equatable {
     
     // MARK: - API
     
@@ -100,6 +100,10 @@ public class HNItem: Codable, Identifiable {
         self.pollId = pollId
         self.parentId = parentId
         self.commentCount = commentCount
+    }
+    
+    public static func == (lhs: HNItem, rhs: HNItem) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
