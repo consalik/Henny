@@ -5,6 +5,8 @@ import CryptoKit
 
 struct HNMetadataCache {
     
+    // MARK: - Utilities
+    
     private let fileManager = FileManager.default
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: String(describing: HNMetadataCache.self))
     
@@ -24,7 +26,11 @@ struct HNMetadataCache {
         self.cacheDirectoryName = cacheDirectoryName
     }
     
-    // MARK: - Expiry
+    // MARK: - In-Memory Cache
+    
+    private let inMemoryCache = NSCache<NSURL, LPLinkMetadata>()
+    
+    // MARK: - Persistence
     
     private func metadataExpired(atPath path: String) -> Bool {
         guard let attributes = try? fileManager.attributesOfItem(atPath: path),
@@ -34,8 +40,6 @@ struct HNMetadataCache {
         
         return Date.now.timeIntervalSince(modificationDate) > metadataLifetime
     }
-    
-    // MARK: - Size
     
     private func clearCacheIfNeeded() throws {
         let cacheDirectoryURL = try cacheDirectoryURL()
@@ -68,8 +72,6 @@ struct HNMetadataCache {
             }
         }
     }
-    
-    // MARK: - URLs
     
     private func cacheDirectoryURL() throws -> URL {
         do {
@@ -113,6 +115,8 @@ struct HNMetadataCache {
     // MARK: - Lifecycle
     
     func set(_ metadata: LPLinkMetadata, for url: URL) throws {
+        inMemoryCache.setObject(metadata, forKey: url as NSURL)
+        
         let fileURL = try fileURL(for: url)
 
         do {
@@ -127,6 +131,10 @@ struct HNMetadataCache {
     }
 
     func metadata(for url: URL) throws -> LPLinkMetadata? {
+        if let metadata = inMemoryCache.object(forKey: url as NSURL) {
+            return metadata
+        }
+        
         let fileURL = try fileURL(for: url)
 
         guard fileManager.fileExists(atPath: fileURL.path),
@@ -147,6 +155,8 @@ struct HNMetadataCache {
     }
 
     func clear() throws {
+        inMemoryCache.removeAllObjects()
+        
         do {
             let cacheDirectoryURL = try cacheDirectoryURL()
             let contents = try fileManager.contentsOfDirectory(atPath: cacheDirectoryURL.path)
