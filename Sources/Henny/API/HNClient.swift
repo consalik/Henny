@@ -135,6 +135,46 @@ public class HNClient {
         }
     }
     
+    private func fetchAndYieldOrderedItems(ids: [Int], metadata: Bool, continuation: AsyncStream<HNItem>.Continuation) async {
+        var fetchedItems: [Int: HNItem] = [:]
+
+        await withTaskGroup(of: (Int, HNItem?).self) { taskGroup in
+            for id in ids {
+                taskGroup.addTask {
+                    return (id, await self.item(id: id, metadata: metadata))
+                }
+            }
+
+            for await (id, item) in taskGroup {
+                if let item = item {
+                    fetchedItems[id] = item
+                }
+            }
+        }
+
+        for id in ids {
+            if let item = fetchedItems[id] {
+                continuation.yield(item)
+            }
+        }
+    }
+
+    private func fetchAndYieldUnorderedItems(ids: [Int], metadata: Bool, continuation: AsyncStream<HNItem>.Continuation) async {
+        await withTaskGroup(of: HNItem?.self) { taskGroup in
+            for id in ids {
+                taskGroup.addTask {
+                    return await self.item(id: id, metadata: metadata)
+                }
+            }
+
+            for await item in taskGroup {
+                if let item = item {
+                    continuation.yield(item)
+                }
+            }
+        }
+    }
+    
     // MARK: - Comments
     
     public func comments(forItem item: HNItem) async -> [HNComment] {
@@ -327,45 +367,5 @@ public class HNClient {
         try? metadataCache.set(metadata, for: url)
         
         return metadata
-    }
-    
-    private func fetchAndYieldOrderedItems(ids: [Int], metadata: Bool, continuation: AsyncStream<HNItem>.Continuation) async {
-        var fetchedItems: [Int: HNItem] = [:]
-
-        await withTaskGroup(of: (Int, HNItem?).self) { taskGroup in
-            for id in ids {
-                taskGroup.addTask {
-                    return (id, await self.item(id: id, metadata: metadata))
-                }
-            }
-
-            for await (id, item) in taskGroup {
-                if let item = item {
-                    fetchedItems[id] = item
-                }
-            }
-        }
-
-        for id in ids {
-            if let item = fetchedItems[id] {
-                continuation.yield(item)
-            }
-        }
-    }
-
-    private func fetchAndYieldUnorderedItems(ids: [Int], metadata: Bool, continuation: AsyncStream<HNItem>.Continuation) async {
-        await withTaskGroup(of: HNItem?.self) { taskGroup in
-            for id in ids {
-                taskGroup.addTask {
-                    return await self.item(id: id, metadata: metadata)
-                }
-            }
-
-            for await item in taskGroup {
-                if let item = item {
-                    continuation.yield(item)
-                }
-            }
-        }
     }
 }
