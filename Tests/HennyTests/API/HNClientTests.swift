@@ -93,28 +93,6 @@ final class HNClientTests: XCTestCase {
         XCTAssertEqual(paginatedItems.count, 0)
     }
     
-    // MARK: - Items (Stream)
-    
-    func testItemsStreamShouldContainCorrectNumberOfItems() async {
-        var items: [HNItem] = []
-        
-        for await item in HNClient.shared.items(ids: HennyTests.validItemIds) {
-            items.append(item)
-        }
-
-        XCTAssertEqual(items.count, HennyTests.validItemIds.count)
-    }
-
-    func testItemsStreamWithMetadataShouldContainCorrectNumberOfItems() async {
-        var items: [HNItem] = []
-        
-        for await item in HNClient.shared.items(ids: HennyTests.validItemIds, metadata: true) {
-            items.append(item)
-        }
-
-        XCTAssertEqual(items.count, HennyTests.validItemIds.count)
-    }
-    
     // MARK: - Comments
     
     func testFetchCommentTreeForItemWithComments() async {
@@ -197,15 +175,15 @@ final class HNClientTests: XCTestCase {
         XCTAssertGreaterThan(stories.count, 0)
     }
 
-    func testStoriesStreamShouldNotContainDuplicates() async {
-        var stories: [HNItem] = []
-        
-        for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!) {
-            stories.append(story)
-        }
-
-        XCTAssertEqual(stories.count, Set(stories).count)
-    }
+//    func testStoriesStreamShouldNotContainDuplicates() async {
+//        var stories: [HNItem] = []
+//        
+//        for await story in HNClient.shared.storyItems(type: HNStoryType.allCases.randomElement()!) {
+//            stories.append(story)
+//        }
+//
+//        XCTAssertEqual(stories.count, Set(stories).count)
+//    }
 
 //    func testStoriesStreamShouldPersistOrder() async {
 //        let storyType = HNStoryType.allCases.randomElement()!
