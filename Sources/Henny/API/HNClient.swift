@@ -157,18 +157,11 @@ public class HNClient {
                     continuation.finish()
                     return
                 }
-                
-                let topLevelComments = await items(ids: item.commentsIds)
-                
-                guard !topLevelComments.isEmpty else {
-                    continuation.finish()
-                    return
-                }
 
                 if ordered {
-                    await fetchAndYieldOrderedComments(items: topLevelComments, continuation: continuation)
+                    await fetchAndYieldOrderedComments(ids: item.commentsIds, continuation: continuation)
                 } else {
-                    await fetchAndYieldUnorderedComments(items: topLevelComments, continuation: continuation)
+                    await fetchAndYieldUnorderedComments(ids: item.commentsIds, continuation: continuation)
                 }
 
                 continuation.finish()
@@ -176,14 +169,19 @@ public class HNClient {
         }
     }
     
-    private func fetchAndYieldOrderedComments(items: [HNItem], continuation: AsyncStream<HNComment>.Continuation) async {
+    private func fetchAndYieldOrderedComments(ids: [Int], continuation: AsyncStream<HNComment>.Continuation) async {
         var fetchedComments: [Int: HNComment] = [:]
 
         await withTaskGroup(of: (Int, HNComment?).self) { taskGroup in
-            for item in items {
+            for id in ids {
                 taskGroup.addTask {
+                    guard let item = await self.item(id: id) else {
+                        return (id, nil)
+                    }
+                    
                     let comments = await self.comments(forItem: item)
-                    return (item.id, HNComment(item: item, comments: comments))
+                    
+                    return (id, HNComment(item: item, comments: comments))
                 }
             }
 
@@ -194,19 +192,23 @@ public class HNClient {
             }
         }
 
-        let orderedItems = items.sorted(by: { $0.id < $1.id })
-        for item in orderedItems {
-            if let comment = fetchedComments[item.id] {
+        for id in ids {
+            if let comment = fetchedComments[id] {
                 continuation.yield(comment)
             }
         }
     }
 
-    private func fetchAndYieldUnorderedComments(items: [HNItem], continuation: AsyncStream<HNComment>.Continuation) async {
+    private func fetchAndYieldUnorderedComments(ids: [Int], continuation: AsyncStream<HNComment>.Continuation) async {
         await withTaskGroup(of: HNComment?.self) { taskGroup in
-            for item in items {
+            for id in ids {
                 taskGroup.addTask {
+                    guard let item = await self.item(id: id) else {
+                        return nil
+                    }
+                    
                     let comments = await self.comments(forItem: item)
+                    
                     return HNComment(item: item, comments: comments)
                 }
             }
