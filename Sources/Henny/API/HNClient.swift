@@ -29,10 +29,6 @@ public class HNClient {
         return decoder
     }()
     
-    // MARK: - General
-    
-    private let notificationCenter = NotificationCenter.default
-    
     // MARK: - Initialization
     
     init() {
@@ -349,6 +345,18 @@ public class HNClient {
         database.goOnline()
     }
     
+    // MARK: - Settings
+    
+    private var shouldFetchSubresources = false
+    
+    public func enableFetchSubresources() {
+        shouldFetchSubresources = true
+    }
+    
+    public func disableFetchSubresources() {
+        shouldFetchSubresources = false
+    }
+    
     // MARK: - Helpers
     
     private func metadata(for url: URL) async -> LPLinkMetadata? {
@@ -358,7 +366,7 @@ public class HNClient {
         
         let provider = LPMetadataProvider()
         
-        provider.shouldFetchSubresources = false
+        provider.shouldFetchSubresources = shouldFetchSubresources
         
         guard let metadata = try? await provider.startFetchingMetadata(for: url) else {
             return nil
