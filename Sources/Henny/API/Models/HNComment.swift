@@ -1,6 +1,6 @@
 import Foundation
 
-public struct HNComment: Codable {
+public struct HNComment: Codable, Equatable {
     public let item: HNItem
     public let comments: [HNComment]
 }
