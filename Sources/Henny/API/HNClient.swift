@@ -150,12 +150,11 @@ public class HNClient {
         return nodes
     }
     
-    public func comments(forItem item: HNItem) -> AsyncStream<HNComment> {
-        return AsyncStream(HNComment.self) { continuation in
+    public func comments(forItem item: HNItem, ordered: Bool = false) -> AsyncStream<HNComment> {
+        AsyncStream(HNComment.self) { continuation in
             Task {
                 guard !item.commentsIds.isEmpty else {
                     continuation.finish()
-                    
                     return
                 }
                 
@@ -163,25 +162,59 @@ public class HNClient {
                 
                 guard !topLevelComments.isEmpty else {
                     continuation.finish()
-                    
                     return
                 }
-                
-                await withTaskGroup(of: HNComment.self) { taskGroup in
-                    for topLevelComment in topLevelComments {
-                        taskGroup.addTask {
-                            let comments = await self.comments(forItem: topLevelComment)
-                            
-                            return HNComment(item: topLevelComment, comments: comments)
-                        }
-                    }
 
-                    for await comment in taskGroup {
-                        continuation.yield(comment)
-                    }
+                if ordered {
+                    await fetchAndYieldOrderedComments(items: topLevelComments, continuation: continuation)
+                } else {
+                    await fetchAndYieldUnorderedComments(items: topLevelComments, continuation: continuation)
                 }
-                
+
                 continuation.finish()
+            }
+        }
+    }
+    
+    private func fetchAndYieldOrderedComments(items: [HNItem], continuation: AsyncStream<HNComment>.Continuation) async {
+        var fetchedComments: [Int: HNComment] = [:]
+
+        await withTaskGroup(of: (Int, HNComment?).self) { taskGroup in
+            for item in items {
+                taskGroup.addTask {
+                    let comments = await self.comments(forItem: item)
+                    return (item.id, HNComment(item: item, comments: comments))
+                }
+            }
+
+            for await (id, comment) in taskGroup {
+                if let comment = comment {
+                    fetchedComments[id] = comment
+                }
+            }
+        }
+
+        let orderedItems = items.sorted(by: { $0.id < $1.id })
+        for item in orderedItems {
+            if let comment = fetchedComments[item.id] {
+                continuation.yield(comment)
+            }
+        }
+    }
+
+    private func fetchAndYieldUnorderedComments(items: [HNItem], continuation: AsyncStream<HNComment>.Continuation) async {
+        await withTaskGroup(of: HNComment?.self) { taskGroup in
+            for item in items {
+                taskGroup.addTask {
+                    let comments = await self.comments(forItem: item)
+                    return HNComment(item: item, comments: comments)
+                }
+            }
+
+            for await comment in taskGroup {
+                if let comment = comment {
+                    continuation.yield(comment)
+                }
             }
         }
     }
