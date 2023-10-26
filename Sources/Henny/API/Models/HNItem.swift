@@ -136,3 +136,47 @@ public extension HNItem {
         url?.host?.replacingOccurrences(of: "www.", with: "", options: .regularExpression)
     }
 }
+
+public extension HNItem {
+    
+    var cleanTitle: String? {
+        guard let title = titleHTML,
+              let regex = try? NSRegularExpression(pattern: "(\\w+\\s+HN:)", options: []) else {
+            return nil
+        }
+        
+        let range = NSRange(location: 0, length: title.count)
+        let result = regex.stringByReplacingMatches(in: title, range: range, withTemplate: "")
+        let removeSpaceInBeginning = result.trimmingCharacters(in: .whitespaces)
+        
+        return removeSpaceInBeginning
+    }
+    
+    var text: String? {
+        guard let textHTML = textHTML,
+              let data = textHTML.data(using: .utf8) else {
+            return nil
+        }
+        
+        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+            .documentType: NSAttributedString.DocumentType.html,
+            .characterEncoding: String.Encoding.utf8.rawValue
+        ]
+        
+        guard let attributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) else {
+            return nil
+        }
+        
+        return attributedString.string
+    }
+    
+    var caption: String? {
+        guard let text else {
+            return nil
+        }
+        
+        let caption = text.replacingOccurrences(of: "(\\n|\\r)", with: " ", options: .regularExpression)
+        
+        return caption
+    }
+}
