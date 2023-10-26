@@ -149,6 +149,42 @@ public class HNClient {
         
         return nodes
     }
+    
+    public func comments(forItem item: HNItem) -> AsyncStream<HNComment> {
+        return AsyncStream(HNComment.self) { continuation in
+            Task {
+                guard !item.commentsIds.isEmpty else {
+                    continuation.finish()
+                    
+                    return
+                }
+                
+                let topLevelComments = await items(ids: item.commentsIds)
+                
+                guard !topLevelComments.isEmpty else {
+                    continuation.finish()
+                    
+                    return
+                }
+                
+                await withTaskGroup(of: HNComment.self) { taskGroup in
+                    for topLevelComment in topLevelComments {
+                        taskGroup.addTask {
+                            let comments = await self.comments(forItem: topLevelComment)
+                            
+                            return HNComment(item: topLevelComment, comments: comments)
+                        }
+                    }
+
+                    for await comment in taskGroup {
+                        continuation.yield(comment)
+                    }
+                }
+                
+                continuation.finish()
+            }
+        }
+    }
 
     // MARK: - Stories
     
